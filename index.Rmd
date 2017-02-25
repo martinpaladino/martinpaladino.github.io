@@ -1,0 +1,43 @@
+---
+title: "object of the type 'closure' is not subsettable"
+author: 
+- Martín Paladino^[mpaladino@mora.edu.mx]
+date: Actualizado el `r format(Sys.time(), "%d/%m/%Y")`
+output: 
+  html_document: 
+    theme: journal
+---
+
+Esta es la página que acompaña al repositorio Rguias2. Incluye las salidas en .html de las guías de manejo de datos, gráficos y modelado en R.  
+Cuando aprenda a usar Jekyll esto será un blog, por ahora es web 1.0. Si quiere hacer algún comentario debe tener una cuenta de GitHub y abrir un issue o pull request en directamente en el [repositorio](https://github.com/martinpaladino/martinpaladino.github.io).  
+El diseño es austero para acompañar a la época.^[Al diseñador le indexaron el pago en UMA "para recuperar el espíritu original y la verdadera función social del salario mínimo."]
+
+Mis caprichos: 
+
+1. *Investigación reproducible.* Porque hay cosas mejores que hacer en la vida que copiar la salida de STATA, pegar en Excel, formatear, copiar, pegar a Word, ver si entra en una página, descubrir que no, volver a formatear en Excel, pegar en Word, revisar y repetir el procedimiento cuando me dí cuenta que los códigos de una variable estaban mal. 
+
+2. *Programación funcional e inmutabilidad de los datos.* Porque hay cosas mejores para hacer en la vida que buscar la línea de código exacta que los corrompió. 
+
+3. *La gramática de lo gráficos.* Porque hay cosas mejores que hacer en la vida que mirar piecharts en 3D.  
+
+4. *Análisis de datos categóricos.* Porque soy sociólogo. 
+
+#Guías de  R.
+
+>Soon to be populated. 
+
+#Ejercicios. 
+
+##[Agregar un nivel de agrupamiento a una base de datos existente](https://martinpaladino.github.io/Datos_jerarquicos.html)
+
+Ejercicio práctico de manipulación de datos en R. 
+
+Le viene incluyendo todo lo que es... 
+
+- Definición de datos jerárquicos. 
+- Problema práctico: agregar una nueva jeraquía a datos existentes. 
+- Solución del problema con R. 
+    - Con un bucle.
+    - Con una función vectorizada. 
+    - Con un join de bases de datos. 
+- Benchmarks. 

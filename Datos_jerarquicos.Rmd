@@ -6,7 +6,7 @@ output:
   html_document: 
     highlight: textmate
     number_sections: yes
-    theme: flatly
+    theme: journal
     toc: yes
 ---
 
@@ -37,39 +37,48 @@ Fila |Continente | País
 -----|-----------|---------------
 1    |América    | México
 2    |América    | Jamaica
-3    |América    | Uruguaguay
+3    |América    | Uruguay
 4    |Europa     | Croacia
 5    |Europa     | Luxemburgo
 6    |Europa     | San Marino 
 
-En la Tabla 1 uno podemos agrupar los datos: las filas 1, 5 y 6 de la columna nivel educativo son el grupo "Primaria", las filas 3 a 5 de la columna "Género" son el grupo femenino. Sin embargo los grupos cruzados que obtenemos no son mutuamente excluyentes, 1 y 5 pertenecen al grupo "Primaria", pero a dos grupos diferentes de género. La Tabla 2 forma grupos en una estructura jerárquica: cada país correponde sólo a un continente. 
+En la Tabla 1 uno podemos agrupar los datos: las filas 1, 5 y 6 de la columna nivel educativo son el grupo "Primaria", las filas 3 a 5 de la columna "Género" son el grupo femenino. Sin embargo los grupos cruzados que obtenemos no son mutuamente excluyentes, 1 y 5 pertenecen al grupo "Primaria", pero a dos grupos diferentes de género. La Tabla 2 forma grupos en una estructura jerárquica: cada país corresponde sólo a un continente. 
 
-El problema práctico que queremos resolver es agregar a una base de datos una nueva colunma en la que incluyamos un nuevo nivel de agrupamiento jerárquico. El primer paso es verificar que nuestros datos tengan una estructura jerárquica, de lo contrario estamos ante un problema diferente. Cada fila de los datos originales debe pertenecer a uno y sólo uno de los grupos que queremos agregar. 
+El problema práctico que queremos resolver es agregar a una base de datos una nueva columna en la que incluyamos un nuevo nivel de agrupamiento jerárquico. El primer paso es verificar que nuestros datos tengan una estructura jerárquica, de lo contrario estamos ante un problema diferente. Cada fila de los datos originales debe pertenecer a uno y sólo uno de los grupos que queremos agregar. 
 
-En este ejemplo práctico tomaremos la base de CONAPO del Índice de Marginación a nivel municipal, que ya incluye un órden jerárquico de Entidades y Municipios. Cada municipio pertenece solamente a una entidad. Queremos agregar las regiones a las que pertenece cada entidad, un nivel de jeraquía más alto. Es necesario, por lo tanto, conocer a qué región pertenece cada Entidad.
 
 #Agregar un nivel jerárquico más amplio usando R. 
 
-Hay varias aproximaciones a este problema. La más directa y laboriosa es editar manualmente los datos y agregar la región a cada fila. Con 14646 filas en total no es una gran idea, llevaría mucho tiempo y además este procedimiento es propenso a errores. Mejor automatizar el proceso.
-Para automatizarlo también tenemos varias opciones. En cualquier de las opciones al menos dos estructuras de datos, la base con la información de Entidades y Municipios y alguna otra estructura que especifica a qué región pertenece cada Entidad. Luego debemos pasar esos datos a alguna función o funciones para que cree la fila "REGION" con el nombre de la región que corresponde, alineado en la fila de la entidad pertinente. La columna REGION deberá tener un largo de 14646, es decir, el mismo largo que la base de datos. 
+En este ejemplo práctico tomaremos la base de CONAPO del Índice de Marginación a nivel municipal, que ya incluye un orden jerárquico de Entidades y Municipios. Cada municipio pertenece solamente a una entidad. Queremos agregar las regiones a las que pertenece cada Entidad, un nivel de jerarquía más alto. 
+Es necesario, por lo tanto, conocer a qué región pertenece cada Entidad. Vamos a tomar una [regionalización](https://es.wikipedia.org/wiki/Regiones_de_México) muy simple, sólo a los efectos de desarrollar el problema práctico. 
 
-```{r}
+Hay varias aproximaciones a este problema. La más directa y laboriosa es editar manualmente los datos y agregar la región a cada fila. Con 14641 filas en total no es una gran idea, llevaría mucho tiempo y además este procedimiento es propenso a errores. Mejor automatizarlo, para algo instalamos R en nuestra computadora. 
+
+Para automatizarlo también tenemos varias opciones. En cualquiera de las opciones vamos necesitar al menos dos estructuras de datos, la base con la información de Entidades y Municipios y alguna otra estructura que especifica a qué región pertenece cada Entidad. Luego debemos pasar esos datos a alguna función o funciones para que cree la columna "REGION", que en cada fila tendrá el nombre de la región  corresponde a esa observación. La columna REGION deberá tener un largo de 14641, es decir, el mismo largo que la base de datos. 
+
+```{r, warning=FALSE, message=FALSE}
+#Carga de librerías. 
+
 library(tidyverse)
 library(knitr)
-#Cargamos la base de datos. Modificar la ubicación del archivo si es necesario. 
-base_marginacion <- read_csv("C:/Users/mpaladino/Downloads/Base_Indice_de_marginacion_municipal_90-15.csv",col_types = cols(`AÑO` = col_character())) %>%
-  select(-`<U+FEFF>CVE_MUN`, -CVEE_MUN, -VP) %>%
-  mutate (POB_TOT=gsub(" ","", POB_TOT)) %>% 
-  mutate(POB_TOT=as.integer(POB_TOT)) %>% filter(ENT!="Nacional")
+
+#Cargamos la base directamente del sítio de CONAPO. 
+
+base_marginacion <- read_csv("http://www.conapo.gob.mx/work/models/CONAPO/Marginacion/Datos_Abiertos/Municipio/Base_Indice_de_marginacion_municipal_90-15.csv",col_types = cols(`AÑO` = col_character())) %>%
+  select(-`<U+FEFF>CVE_MUN`, -CVEE_MUN, -VP) %>%                   #Elimino algunas columnas que no necesito. 
+  mutate (POB_TOT=gsub(" ","", POB_TOT)) %>%                       #Quito el espacio que separa a los miles en población total...
+  mutate(POB_TOT=as.integer(POB_TOT)) %>%                          #y lo paso a numérico.  
+  filter(ENT!="Nacional")                                          #Elimino los datos agregados. 
 ``` 
 
-Una  primera aproximación es usar una función de recodificación condicional. La condición que vamos a verificar es de pertenencia, por lo que usaremos el operador `%in%` que verifica si un elemento pertenece o no a un conjunto y regresa `TRUE` o `FALSE` según sea el caso. El conjunto al que los Entidades pertenecerán o no está definido por cada región. Como el número de Entidades por región es desigual no es viable usar una estructura rectangular como el data.frame, por lo tanto definiremos a cada conjunto/región como un vector atómico para mantener las cosas simples^[Podriamos hacer una lista, pero introduce una complejidad adicional innecesaria para este ejemplo.] El vector Sur_oeste incluye a los Estados de Chiapas, Oaxaca y Guerrero, y así con los 7 restantes. Es fundamental cometer ningún error ortográfico, de espacio, puntuación, etc. Para el evaluador lógico de R `Mexico` y `México` son completamente diferentes. El siguiente paso es programar una función que verifique fila por fila el nombre de la Entidad -la colunma ENT-, revise a qué conjunto/vector pertenece y asigne el nombre del vector correcto en la columna REG de cada fila.  
+Una  primera aproximación es usar una función de recodificación condicional. La condición que vamos a verificar es de pertenencia, por lo que usaremos el operador `%in%` que verifica si un elemento pertenece o no a un conjunto y regresa `TRUE` o `FALSE` según sea el caso. 
+
+El conjunto al que las Entidades pertenecerán o no está definido por cada región. Como el número de Entidades por región es desigual no es viable usar una estructura rectangular como el data.frame, por lo tanto definiremos a cada conjunto/región como un vector atómico, para mantener las cosas simples^[Podríamos hacer una lista, pero introduce una complejidad adicional innecesaria para este ejemplo.] El vector Sur_oeste incluye a los Estados de Chiapas, Oaxaca y Guerrero, y así con los 7 restantes. Es fundamental no cometer error ortográfico alguno, de espacios, puntuación, etc. Para el evaluador lógico de R `Mexico` y `México` son completamente diferentes. El siguiente paso es programar una función que verifique fila por fila el nombre de la Entidad -la columna ENT-, revise a qué conjunto/vector pertenece y asigne el nombre del vector correcto en la columna REG de cada fila.  
 
 ##Opción 1. Un bucle. 
 
-La opción 1 es una forma muy clásica de programar una función para que haga algo si se cumple cierta condición. Usamos dos estructuras de control anidadas: la estrucura `for()` para hacer que el evaluador de R circule fila por fila. En cada paso del bucle el índice `i` aumenta una unidad, partiendo de 1 hasta llegar a `nrow(base_marginacion)` o 14646. En cada paso/fila evalúa los 8 `if` y, cuando se cumple la condición (es decir, la Entidad pertenece al vector en cuestión) asigna con `=` el nombre correcto en `$REG`. Modifica directamente la estructura de datos base_marginacion, es decir, como función no tiene un output, sólo produce efectos secundarios. Las posibilidades de que un error de sintaxis o de concepto en la definición de la función corrompa los datos son altísimas.
-El procesamiento de esto 9 bucles es muy lento. El evaluador tiene para pasar por cada una de las 14646 y evaluar 8 condiciones con 32 resultados posibles. Además R es conocido en el mundo de la programación por su lentitud para procesar estructuras recursivas. **Debemos evitar este tipo de programación siempre.** Seguramente habrá una función vectorizada que haga lo mismo, mucho más rápido y eliminando la posibilidad de corromper los datos.   
-
+La opción 1 es una forma muy clásica de programar una función para que haga algo si se cumple cierta condición. Si tiene experiencia en otros lenguajes de programación seguramente fue la primera en la que pensó. 
+En este caso usamos dos estructuras de control anidadas: la estructura `for()` para hacer que el evaluador de R circule fila por fila. En cada paso del bucle el índice `i` aumenta una unidad, partiendo de 1 hasta llegar a `nrow(base_marginacion)` o 14641. En cada paso/fila evalúa los 8 `if()` y, cuando se cumple la condición (es decir, la Entidad pertenece al vector en cuestión) asigna con `=` el nombre correcto en la columna `REG`. Esta función modifica directamente la estructura de datos base_marginacion, es decir, como función no tiene un output, sólo produce efectos secundarios. Las posibilidades de que un error de sintaxis o de concepto en la definición de la función corrompa los datos son muy altas. 
 
 ```{r}
 #Generamos un conjunto vectores con la jerarquía de Regiones y entidades. 
@@ -109,14 +118,14 @@ base_marginacion %>% group_by(REG, ENT) %>% tally() %>% kable()
 
 ```
 
+El procesamiento de esto 9 bucles es muy lento. El evaluador tiene para pasar por cada una de las 14641 filas, evaluar 8 condiciones con 32 resultados posibles, adivinar que tipo de datos es el resultante, abrir una estructura de datos, hacerle un cambio y volverla a escribir completa. Además R es conocido en el mundo de la programación por su lentitud para procesar estructuras recursivas. **Debemos evitar este tipo de programación siempre.** Seguramente habrá una función vectorizada que haga lo mismo, mucho más rápido y eliminando la posibilidad de corromper los datos.
 
 ##Opción 2. Una función condicional vectorizada. 
 
-En este caso usamos `case_when()`, una función que hace lo mismo que nuestro bucle: pasar por cada fila de un data.frame, ver si en una columna se cumple una condición y asignar un valor. Es una función especializada, está programada de modo tal que siempre evalua a lo largo de una columna de un data.frame, por lo que no tenemos que indicarle explícitamente que lo haga. La sintaxis es bastante más corta y clara: separadas por comas van las condiciones del lado izquierdo y a la derecha de `~` el resultado que se registra si la condición se cumple. Se ejecuta 10 veces más rápido que el bucle, es más legible y fácil de modificar en caso necesario. En el bucle si quiero cambiar el nombre de la variable de REG a "Región" necesito modificar 8 líneas, aquí con cambiar REG por "Región" al principio basta. El resultado es el mismo. 
+En este caso usamos `case_when()`, una función que hace lo mismo que nuestro bucle: pasar por cada fila de un data.frame, ver si en una columna se cumple una condición y asignar un valor. Es una función especializada, está programada de modo tal que siempre evalua a lo largo de una columna de un data.frame, por lo que no tenemos que indicarle explícitamente que lo haga. La sintaxis es bastante más corta y clara: separadas por comas van las condiciones del lado izquierdo y a la derecha de `~` el resultado que se registra si la condición se cumple. Se ejecuta muchísimo más rápido que el bucle, es más legible y fácil de modificar en caso necesario. En el bucle si quisiera cambiar el nombre de la variable de REG a "Región" necesitaría modificar 8 líneas, en case_when con cambiar REG por "Región" al principio basta. El resultado es el mismo. 
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 #Opción 2. Función vectorizada dplyr::case_when(). 
-
 
 #Empiezo por importar nuevamente la base, ya que el código anterior la modificó. 
 
@@ -142,17 +151,18 @@ base_marginacion %>%
   tally()
 ```
 
+No sólo es mucho más rápido y claro, también es fácil manejar el case_when dentro del paradigma de programación funcional. La función tiene un input  (la bases de datos y los vectores que señalan qué Entidad pertenece a cada región) y un output (la nueva columna REG). Puedo usar ese output en la operación siguiente y no se va a modificar el data.frame original. No hay forma de corromper la base de datos. Sin embargo sigo dependiendo de 8 vectores para que el código funcione. Tiene que haber una manera mejor. 
 
 ##Opción 3. Un join de bases de datos. 
 
-Una tercera aproximación es usar que realiza un procedimiento totalmente diferente, un join. Los joins son sumamente útiles en procesamiento de datos, nos sirven para integrar mútiples bases de datos. `dplyr::` permite hacer diferentes tipos de joins: completos, parciales, aún negativos. En este caso usamos inner_join, que es el más estricto de todos y solamente conserva las filas en las que hay empates perfectos en los valores de ambas bases de datos. Nos sirve para asegurarnos que el resultado es correcto, el data.frame resultante debería tener el mismo número de filas que el más largo (base_marginacion). Si tiene menos filas algo ha salido mal. 
+Una tercera aproximación realiza un procedimiento muy distinto a los anteriores: usamos un join. Los joins son sumamente útiles en procesamiento de datos, nos sirven para integrar múltiples bases de datos siempre que haya una columna con registros en común. `dplyr::` permite hacer diferentes tipos de joins: completos, parciales, aún negativos. En este caso usamos inner_join, que es el más estricto de todos y solamente conserva las filas en las que hay empates perfectos en los valores de ambas bases de datos. Esto nos sirve para asegurarnos que el resultado es correcto. El data.frame resultante debería tener el mismo número de filas que el más largo (base_marginacion). Si tiene menos filas sabremos que algo ha salido mal. 
 
->Nota sobre `dplyr::*_join`. Tiene un problema grave cuando la columna de empate (definida con `by=` dentro de la función) tiene cadenas de caracteres que incluye caracteres no ASCII, es decir, acentos o letras como la ñ o ç. Si no nos aseguramos que las estructuras de datos que queremos unir tengan exactamente la misma codificaciones de caracteres join no va a encontrar conicidencia. Por consiguiente se recomienda hacer siempre joins unsando claves numéricas o alfanuméricas. Más allá de este problema de `dplyr::*_join()` es una buena práctica usar claves y no nombres, ya que se reduce la posibilidad de errores de tipeado. Recuerde que para R México $\neq$ Mexico.
+>Nota sobre `dplyr::*_join`. Esta familia de funciones tiene un problema irresoluble cuando la columna de empate (definida con `by=` dentro de la función) tiene cadenas con caracteres que no son ASCII, es decir, acentos o letras como la ñ o ç. Si no nos aseguramos que las estructuras de datos que queremos unir tengan exactamente el mismo encoding join no va a encontrar coincidencia, aunque en la salida de pantalla ambas letras se vean iguales. Por consiguiente se recomienda hacer siempre joins usando claves numéricas o alfanuméricas. Más allá de este problema particular de la implementación de `dplyr::*_join()` en lenguaje C es una buena práctica usar claves y no nombres, ya que se reduce la posibilidad de errores de tipeado. Recuerde que para R México $\neq$ Mexico.
 
 ```{r}
 #Opción 3: un join.
 
-#Primero creo un data.frame con los nombres cortos de las Entidades Federativas, que pueden ser útiles para salidas gráficas, la clave INEGI de entidad y la región a la que pertenecen. Uso tribble que organiza la entrada en columnas y hace más legible la información que estamos cargando, pero podría usar data.frame() y otra función similar. Si quiero conservar esta tabla (que sin dudas será de utilidad) podría exportarla a un archivo .csv 
+#Primero creo un data.frame con los nombres cortos de las Entidades Federativas, que pueden ser útiles para salidas gráficas, la clave INEGI de entidad y la región a la que pertenecen. Uso tribble que organiza la entrada en columnas y hace más legible la información que estamos cargando, pero podría usar data.frame() y otra función similar. Si quiero conservar esta tabla (que sin dudas será de utilidad) podría exportarla a un archivo .csv. De paso recodifico algunos problemas en los nombres de las entidades. 
 
 tribble(~REGION,        ~ENT_CORTO,           ~CVE_ENT,
         "Centro_norte", "Aguascalientes",     "01",     
@@ -187,7 +197,7 @@ tribble(~REGION,        ~ENT_CORTO,           ~CVE_ENT,
         "Sur_oeste",    "Chiapas",            "07",    
         "Sur_oeste",    "Guerrero",           "12",     
         "Sur_oeste",    "Oaxaca",             "20" 
-        ) ->tabla_regiones  #Le asigno nombre.
+        ) ->tabla_regiones                          #Le asigno nombre a resultado de tribble.
 
 
 #¿A ver?
@@ -196,7 +206,7 @@ kable(tabla_regiones)
 
 #Podemos guardar la tabla en un archivo de valores separados por comas para usarla en otros proyectos. 
 
-#write.csv(tabla_regiones, "~/tabla_regiones.csv", fileEncoding="UTF-8") #Quitas el primer # para que se ejecute. 
+#write.csv(tabla_regiones, "~/tabla_regiones.csv", fileEncoding="UTF-8") 
 
 #Ejecución del join. 
 #===================
@@ -207,7 +217,7 @@ inner_join(base_marginacion, tabla_regiones, by="CVE_ENT") %>%
   select(-n) %>% 
   kable(., caption="Estados por regiones") 
 
-#uso dentro de una cadena de dplyr ¿Cuántos habirtantes tiene cada región?
+#uso dentro de una cadena de dplyr ¿Cuántos habitantes tiene cada región?
 #=========================================================================
 
 inner_join(base_marginacion, tabla_regiones, by="CVE_ENT") %>% 
@@ -263,7 +273,7 @@ Es decir, en el tiempo en que se ejecuta case_when para esta base de datos en es
 
 #¿Cuál usar?
 
-Claramente no usaremos el bucle. Es el más lento, el código es de dificil mantenimiento y tiene efectos secundarios.^[Se podría programar ese bucle haciendo que genere un vector que luego podemos adosar a la base de datos. Aún así sería más lento.] En R **nunca usamos un bucle**.
+Claramente no usaremos el bucle. Es el más lento, el código es de difícil mantenimiento y tiene efectos secundarios.^[Se podría programar ese bucle haciendo que genere un vector que luego podemos adosar a la base de datos. Aún así sería más lento que cualquier función vectorizada.] En R **nunca usamos un bucle**.
 
 `case_when()` e `inner_join()` están cercanos en velocidad, así que tendremos que usar otro criterio para seleccionar. Me inclino por usar un join. 
 
@@ -275,7 +285,7 @@ Claramente no usaremos el bucle. Es el más lento, el código es de dificil mant
 
 #Bonus: joins con dplyr::
 
-Para resolver el problema que teníamos `inner_join()` era la mejor opción, sin embargo dplyr:: inlcuye una familia de funciones join que aplican a casos diferentes. 
+Para resolver el problema que teníamos `inner_join()` era la mejor opción, sin embargo dplyr:: incluye una familia de funciones join que aplican a casos diferentes. 
 
 Table: Funciones de empate de bases de datos de `dplyr::`
 
