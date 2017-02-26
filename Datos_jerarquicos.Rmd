@@ -1,6 +1,7 @@
 ---
 title: "Agregar un nivel de agrupamiento a una base de datos existente"
-author: "Martín Paladino"
+author: 
+- Martín Paladino^[mpaladino@mora.edu.mx]
 date: "25 de febrero de 2017"
 output: 
   html_document: 
@@ -91,12 +92,14 @@ Centro_sur <- c("Distrito Federal","México","Morelos")
 Sur_oeste <- c("Chiapas","Guerrero","Oaxaca")
 Sur_este <- c("Campeche", "Quintana Roo","Tabasco","Yucatán")
 
+base_marginacion2 <- base_marginacion #Guardo una copia del objeto original porque habrá efectos colaterales. 
+
 #Opción 1. Un bucle. Solución en R MUY base. Dos malas prácticas de programación en una: bucles y efectos secundarios. 
 
-for(i in 1:nrow(base_marginacion)){           #i es el índice, 1:nrow es una secuencia de enteros de 1 hasta el número de filas de la base de datos (14646)
-  if (base_marginacion$ENT[i] %in% Noroeste){
-    base_marginacion$REG[i] = "Noroeste"}
-  if (base_marginacion$ENT[i] %in% Noreste){
+for(i in 1:nrow(base_marginacion)){           #i es el índice, 1:nrow es una secuencia de enteros de 1 hasta el número de filas de la base de datos (14641)
+  if (base_marginacion$ENT[i] %in% Noroeste){  #Si base_marginacion en la fila i está en Noroeste...
+    base_marginacion$REG[i] = "Noroeste"}      #base_marginacion$REG en la fila i tendrá el valor "Noroeste"
+  if (base_marginacion$ENT[i] %in% Noreste){   #Y así hasta el final...
     base_marginacion$REG[i] = "Noreste"}
   if (base_marginacion$ENT[i] %in% Oeste){
     base_marginacion$REG[i] = "Oeste"}
@@ -112,10 +115,9 @@ for(i in 1:nrow(base_marginacion)){           #i es el índice, 1:nrow es una se
     base_marginacion$REG[i] = "Sur_este"}
 }
 
-#Verificación: cantidad de municipios por región.
+#Verificación: cantidad de municipios por región.  
 
-base_marginacion %>% group_by(REG, ENT) %>% tally() %>% kable()
-
+base_marginacion %>% group_by(REG, ENT) %>% tally() %>% select(-n) %>% kable()
 ```
 
 El procesamiento de esto 9 bucles es muy lento. El evaluador tiene para pasar por cada una de las 14641 filas, evaluar 8 condiciones con 32 resultados posibles, adivinar que tipo de datos es el resultante, abrir una estructura de datos, hacerle un cambio y volverla a escribir completa. Además R es conocido en el mundo de la programación por su lentitud para procesar estructuras recursivas. **Debemos evitar este tipo de programación siempre.** Seguramente habrá una función vectorizada que haga lo mismo, mucho más rápido y eliminando la posibilidad de corromper los datos.
@@ -127,17 +129,13 @@ En este caso usamos `case_when()`, una función que hace lo mismo que nuestro bu
 ```{r, warning=FALSE, message=FALSE}
 #Opción 2. Función vectorizada dplyr::case_when(). 
 
-#Empiezo por importar nuevamente la base, ya que el código anterior la modificó. 
+base_marginacion <- base_marginacion2 #Regreso a la base orginal, ya que el bucle la modificó.
 
-base_marginacion <- read_csv("C:/Users/mpaladino/Downloads/Base_Indice_de_marginacion_municipal_90-15.csv",col_types = cols(`AÑO` = col_character()), locale = locale(encoding = "UTF-8")) %>%
-  select(-`<U+FEFF>CVE_MUN`, -CVEE_MUN, -VP) %>%
-  mutate (POB_TOT=gsub(" ","", POB_TOT)) %>% 
-  mutate(POB_TOT=as.integer(POB_TOT)) %>% 
-  filter(ENT!="Nacional")
-
+#Ejecución de case_when()
+#========================
 
 base_marginacion %>% 
-  mutate(REG=case_when(
+  mutate(REGION=case_when(
     .$ENT %in% Noroeste ~ "Noroeste",
     .$ENT %in% Noreste ~ "Noreste", 
     .$ENT %in% Oeste ~ "Oeste",
@@ -146,12 +144,44 @@ base_marginacion %>%
     .$ENT %in% Centro_sur ~ "Centro_sur", 
     .$ENT %in% Sur_oeste ~ "Sur_oeste", 
     .$ENT %in% Sur_este ~ "Sur_este"
-  )) %>% #Aquí también podriamos asignar un nombre a la salida con ->
-  group_by(REG, ENT, CVE_ENT) %>% 
+                         )
+        ) %>% #Aquí también podriamos asignar un nombre a la salida con ->
+  group_by(REGION, ENT, CVE_ENT) %>% 
   tally()
 ```
 
-No sólo es mucho más rápido y claro, también es fácil manejar el case_when dentro del paradigma de programación funcional. La función tiene un input  (la bases de datos y los vectores que señalan qué Entidad pertenece a cada región) y un output (la nueva columna REG). Puedo usar ese output en la operación siguiente y no se va a modificar el data.frame original. No hay forma de corromper la base de datos. Sin embargo sigo dependiendo de 8 vectores para que el código funcione. Tiene que haber una manera mejor. 
+No sólo es mucho más rápido y claro, también es posible case_when() dentro del paradigma de programación funcional. La función tiene un input  (la bases de datos y los vectores que señalan qué Entidad pertenece a cada región) y un output (la nueva columna REG). Puedo usar ese output en la operación siguiente y nunca modificar el data.frame original. No hay forma de corromper la base de datos y no es necesario hacer copias y revertir los cambios por efectos colatrerales, como tuvimos que hacer con el bucle. 
+
+### Opción 2.1. Función vectorizada con `ifelse()`
+
+Otra alternativa de función vectorizada `ifelse()`. De hecho `case_when()` es una versión especial de `ifelse()` con sintaxis simplificada para recodificaciones. `ifelse()` es una función genérica para evaluar condiciones, más flexible que `case_when()` en cuanto a su aplicación, pero con una sintaxis más intrincada, ya que el ámbito de cada `ifelse()` anidado se delimita con paréntesis que no se cierran inmediatamente. Por eso es conveniente organizar el código de modo tal que los paréntesis de cierre esten en la misma columna que los de apertura. 
+
+```{r}
+#Opción2.1. (con código de Ulises Sánchez)
+#=========================================
+
+base_marginacion %>% 
+  mutate (
+    REGION=ifelse (
+      ENT %in% Centro_norte, "Centro_norte", ifelse (
+        ENT %in% Centro_sur, "Centro_sur", ifelse (
+          ENT %in% Este, "Este", ifelse (
+            ENT %in% Noreste,"Noreste", ifelse (
+              ENT %in% Noroeste, "Noroeste", ifelse (
+                ENT %in% Oeste, "Oeste", ifelse (
+                  ENT %in% Sur_este, "Sur_este", "Sur_oeste") #Cierra el último ifelse.
+                                                     )
+                                               )
+                                         )
+                                                  )
+                                                    )
+                             )                                #Cierra el primer ifelse.
+             ) %>%  
+  group_by(REGION, ENT, CVE_ENT) %>% 
+  tally()  
+```
+
+En ambos casos logramos el resultado correcto. Sin embargo dependemos de 8 vectores para hacer que el código funcione. Tiene que haber una manera mejor. 
 
 ##Opción 3. Un join de bases de datos. 
 
@@ -202,9 +232,9 @@ tribble(~REGION,        ~ENT_CORTO,           ~CVE_ENT,
 
 #¿A ver?
 
-kable(tabla_regiones)
+kable(tabla_regiones, caption="Tabla de empate entre Regiones, Entidades y clave de entidad.")
 
-#Podemos guardar la tabla en un archivo de valores separados por comas para usarla en otros proyectos. 
+#Podemos guardar la tabla en un archivo de valores separados por comas para usarla en otros proyectos.  
 
 #write.csv(tabla_regiones, "~/tabla_regiones.csv", fileEncoding="UTF-8") 
 
@@ -230,12 +260,12 @@ inner_join(base_marginacion, tabla_regiones, by="CVE_ENT") %>%
 
 ##Tiempos de ejecución. 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE}
 
-system.time(for(i in 1:nrow(base_marginacion)){           #i es el índice, 1:nrow es una secuencia de enteros de 1             hasta el número de filas de la base de datos (14646)
-              if (base_marginacion$ENT[i] %in% Noroeste){
-                base_marginacion$REG[i] = "Noroeste"}
-              if (base_marginacion$ENT[i] %in% Noreste){
+system.time(for(i in 1:nrow(base_marginacion)){           #i es el índice, 1:nrow es una secuencia de enteros de 1             hasta el número de filas de la base de datos (14641)
+              if (base_marginacion$ENT[i] %in% Noroeste){  
+                base_marginacion$REG[i] = "Noroeste"}      
+              if (base_marginacion$ENT[i] %in% Noreste){   
                 base_marginacion$REG[i] = "Noreste"}
               if (base_marginacion$ENT[i] %in% Oeste){
                 base_marginacion$REG[i] = "Oeste"}
@@ -265,60 +295,42 @@ base_marginacion %>%
   )) %>% system.time() ->opcion2
 
 inner_join(base_marginacion, tabla_regiones, by="CVE_ENT") %>% system.time() ->opcion3
-rbind(opcion1, opcion2, opcion3) %>% as.data.frame %>% kable(., caption="Tiempos de ejecución en centésimas de segundo.")
+
+base_marginacion %>% 
+  mutate (
+    REGION=ifelse (
+      ENT %in% Centro_norte, "Centro_norte", ifelse (
+        ENT %in% Centro_sur, "Centro_sur", ifelse (
+          ENT %in% Este, "Este", ifelse (
+            ENT %in% Noreste,"Noreste", ifelse (
+              ENT %in% Noroeste, "Noroeste", ifelse (
+                ENT %in% Oeste, "Oeste", ifelse (
+                  ENT %in% Sur_este, "Sur_este", "Sur_oeste") #Cierra el último ifelse.
+                                                     )
+                                               )
+                                         )
+                                                  )
+                                                    )
+                             )                                #Cierra el primer ifelse.
+             ) %>% system.time() ->opcion2_1
+
+rbind(opcion1, opcion2, opcion2_1, opcion3) %>% as.data.frame %>% kable(., caption="Tiempos de ejecución con resolución en centésimas de segundo.")
 ```
 
-Con más de 5 segundos de tiempo de ejecución el bucle es la peor opción. case_when e inner_join son tan rápidos que la función `Sys.time()` no reporta sus tiempos de ejecución por ser menores a 0.01 segundos. Una prueba de desempeño más detallada arroja 8 nanosegundos para case_when y 20 nanosegundos para inner_join. 
-Es decir, en el tiempo en que se ejecuta case_when para esta base de datos en esta computadora un fotón recorre 2.4 metros, en el de inner_join 6 metros y para el bucle entre un millón y medio y dos millones de kilómetros, es decir, a mitad de camino de la luna.  
+Con más de 7 segundos de tiempo de ejecución el bucle es la peor opción. case_when e inner_join son tan rápidos que la función `Sys.time()` no reporta sus tiempos de ejecución por ser menores a 0.01 segundos. Una prueba de desempeño más detallada arroja 8 nanosegundos para case_when y 20 nanosegundos para inner_join y 16.5 nanosegundos para `ifelse()`.  
+Es decir, en el tiempo en que se ejecuta case_when para esta base de datos en esta computadora un fotón recorre 2.4 metros, con ifelse 5, con inner_join 6 metros y para el bucle entre un millón y medio y dos millones de kilómetros, es decir, a mitad de camino de la luna.  
 
 #¿Cuál usar?
 
 Claramente no usaremos el bucle. Es el más lento, el código es de difícil mantenimiento y tiene efectos secundarios.^[Se podría programar ese bucle haciendo que genere un vector que luego podemos adosar a la base de datos. Aún así sería más lento que cualquier función vectorizada.] En R **nunca usamos un bucle**.
 
-`case_when()` e `inner_join()` están cercanos en velocidad, así que tendremos que usar otro criterio para seleccionar. Me inclino por usar un join. 
+`case_when()`, `ifelse()` e `inner_join()` están cercanos en velocidad, así que tendremos que usar otro criterio para seleccionar. Me inclino por usar un join. 
 
-- Tiene una sintaxis más corta y simple que case_when (menos sintaxis, menos errores).
+- Tiene una sintaxis más corta y simple que case_when o ifelse (menos sintaxis, menos errores).
 - Nos permite mantenernos usando data.frames, en lugar de generar vectores.
 - Por eso podemos reciclar las tablas de claves y usarlas en otros proyectos. 
 - Es más flexible: hay varios tipos joins que nos permiten hacer cosas diferentes, lo que necesitemos en cada caso. 
 - Si esto fuera poco aprender los joins útiles para muchas más cosas: podemos usar el mismo procedimiento para unir dos bases de datos del INEGI por clave de entidad, municipio, localidad o AGEB. Eso queda para la próxima.  
-
-#Bonus: joins con dplyr::
-
-Para resolver el problema que teníamos `inner_join()` era la mejor opción, sin embargo dplyr:: incluye una familia de funciones join que aplican a casos diferentes. 
-
-Table: Funciones de empate de bases de datos de `dplyr::`
-
-
-Función          | Regresa:
------------------|---------------------------------------------------------------------
-inner_join (x,y) | Todas las columnas de x y y. Solamente las filas de en las que la clave de x y y coincide. Elimina las filas que nos tienen coincidencia. 
-full_join(x,y)   | Todas las filas de x y y. Cuando hay coincidencia las empata, cuando no rellena con NA.
-left_join        | Las filas de x y solamente las columnas de x. Rellena faltantes con NA. 
-semi_join        | Regresa solamente las columnas y filas de x cuando hay coincidencia con y. 
-anti_join        | Regresa las columnas de y las filas de x que no coinciden con y.
-
-
-```{r}
-#Para evitar empates perfectos y ver las diferencias vamos a eliminar las 10 primeras filas de tabla_regiones
-
-tabla_regiones2 <- tabla_regiones [11:32,]
-
-# 10,664 filas que coinciden en x y y, 23 columnas (x+y)
-inner_join (base_marginacion, tabla_regiones2, by="CVE_ENT")
-
-#14,641 filas de x o ý 23 columnas (21 de x, 3 de y - 1 que coincide)
-full_join (base_marginacion, tabla_regiones2, by="CVE_ENT")
-
-#14,664 filas de, 23 columnas de x y y.  
-left_join (base_marginacion, tabla_regiones2, by="CVE_ENT") 
-
-#10,664 filas de x y y, sólo las 21 colunmas de x.
-semi_join (base_marginacion, tabla_regiones2, by="CVE_ENT") 
-
-#3,977 filas en x y no en y, columnas de y. 
-anti_join (base_marginacion, tabla_regiones2, by="CVE_ENT") 
-```
 
 ¡Ah! El ejercicio 8.1 de la clase 5.
 
@@ -327,6 +339,7 @@ anti_join (base_marginacion, tabla_regiones2, by="CVE_ENT")
 
 inner_join(base_marginacion, tabla_regiones, by="CVE_ENT") %>% 
   mutate(ANIO=AÑO) %>%      #Pq group_by tiene problemas (a veces) con los acentos y ñ. 
+  filter(ANIO!="2015") %>% 
   group_by(REGION, ANIO) %>% 
   summarise (mediaIM=mean(IM)) %>% 
   qplot(ANIO, mediaIM, group=REGION, color=REGION, data = ., geom="line")
