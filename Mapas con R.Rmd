@@ -1,0 +1,235 @@
+---
+title: "Mapas con ggplot"
+author: "Martín Paladino"
+date: "27 de febrero de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Cartografía con R. Primera prueba. 
+
+Este es un primer intento de generar cartografía a partir de R. 
+
+
+##Unidad territorial: Estados. 
+
+Vamos a utilizar al Estado como unidad territorial, para mantener las cosas simples. 
+
+-Instalamos la librería `rgdal`, que tiene la función `readOGR` para cargar shapefiles en R y convertirlos en un objeto espacial.  
+
+- Descargamos desde acá http://www.conapo.gob.mx/es/CONAPO/Datos_Abiertos_del_Indice_de_Marginacion los datos de marginación del CONAPO a nivel municipal. Se pueden agregar por Estados. 
+
+- ~~Descargamos un shapefile de los Estados de México en este enlace: http://www.numeroslocos.com/~~
+
+- Descagamos los shapefiles del Marco Geoestadístico 2016 del sitio del INEGI (202MB) desde este enlace:  http://internet.contenidos.inegi.org.mx/contenidos/productos//prod_serv/contenidos/espanol/bvinegi/productos/geografia/marc_geo/702825217341_s.zip 
+
+- Descomprimimos todos los archivos en el directorio de trabajo. 
+    - Usamos `getwd()` para saber cuál es nuestro directorio de trabajo. 
+    - No me gusta, preferiría hacerlo en carpetas aparte, pero  readOGR falla si lo hago.  
+
+###Importaciónd de capas. 
+
+```{r}
+library(rgdal)
+library(tidyverse)
+
+#Cargo el shapefile de los estados y lo asigno a capa_estados.
+#"." es el directorio, layer="Estados" el archivo .shp, pero sin la extensión. Sí...
+
+capa_estados <-readOGR(".", layer="Estados")
+
+#¿Qué habrá acá dentro?
+
+class(capa_estados) 
+
+#str(capa_estados) Demasiado largo, supera a la consola. 
+
+capa_estados$NOM_ENT #Con errores de codificación!
+capa_estados$CVE_ENT #Este es el que sirve. 
+
+#A ver...
+ggplot() +  
+  geom_polygon(data=capa_estados, aes(x=long, y=lat, group=group))
+#Latitudd y longitud wtf.
+
+#Con los contornos de los estados. 
+ggplot() +  
+  geom_polygon(data=capa_estados, aes(x=long, y=lat, group=group), fill="white", color="black") 
+
+#Intento de cargar coordenadas(se demora y luego regresa un error)
+library(mapproj)
+ggplot() +  
+  geom_polygon(data=capa_estados, aes(x=long, y=lat, group=group), fill="white", color="black") #+
+  coord_map()
+
+```
+
+Obtuvimos un mapa completo de México. Me gustaría colorearlo por la media de Marginación Municipal por Estado. Para eso debería agregar un `fill=`, pero antes tengo que tener todos los datos en las misma estructura. No entiendo bien la estructura de los objetos "SPDF", que son una mezcla de lista con data.frame. Si fuera un data.frame puro lo haría con join, pero no creo que funcione acá. 
+
+###Colorear los Estados por la media del IM. Con join. (Fracaso)
+
+```{r, error=T}
+#Cargo la base de marginación y la limpio. 
+marginacion <- Base_Indice_de_marginacion_municipal_90_15 <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/datos/Base_Indice_de_marginacion_municipal_90-15.csv", 
+    col_types = cols(`AÑO` = col_character()), 
+    locale = locale(encoding = "UTF-8")) %>%  
+      mutate (POB_TOT=gsub(" ","", POB_TOT)) %>%
+      mutate(POB_TOT=as.integer(POB_TOT)) %>%
+      filter(ENT!="Nacional")
+
+#Obtengo las media de IM para 2015. 
+marginacion %>%
+  filter(AÑO=="2015") %>% 
+  group_by(CVE_ENT) %>% 
+  summarise (mediaIM=mean(IM)) ->mediaIM
+#Una df de 32x2 con CVE_ENT igual al SPDF. Algo es algo...
+
+#Intento un join. 
+inner_join (capa_estados, marginacion, by ="CVE_ENT")
+
+#No se puede, pero al menos mensaje de error es comprensible. 
+
+#Paso el objeto SPDF a data.frame con `fortify()`
+capa_estados_df <- fortify(capa_estados)
+
+class(capa_estados_df) #Ahora sí. 
+#Creo el df con las medias de IM y lo nombro.  
+
+#Lo uno con los polígonos y lo nombro. 
+
+capa_estados_df_mediaIM <- inner_join(capa_estados_df, mediaIM, by="id")
+
+ggplot() +  
+  geom_polygon(data=capa_estados, aes(x=long, y=lat, group=group, fill=mediaIM)) #Falla porque no coinciden los largos de "fill=" y "group="
+```
+
+###Colorear los Estados por la media del IM. Con geom_map. 
+
+ggplot2 tiene un elemento geométrico para generar mapas. Usa el primitivo `geom_polygon()`, pero permite especificar directamente el mapa y aagregar una segunda estructura de datos con información adicional. 
+
+```{r}
+#Crear un data.frame con los polígonos, incluyendo "CVE_ENT"
+library(rgeos) #La requiere. Ver http://stackoverflow.com/questions/30790036/error-istruegpclibpermitstatus-is-not-true  
+
+#Creo el objeto: 
+
+capa_estados_df <- #El proceso es lento, así que voy a guardar el resultado. 
+  fortify(      #Función con métodos para pasar de lista a data.frame.
+  capa_estados, #Objeto a fortificar
+  region="CVE_ENT") #Region del mapa=clave, debe coincidir con el data.frame de datos. (NO FUNCIONA)
+
+#Creo lo datos con los que voy a colorear.
+
+marginacion %>%
+  filter(AÑO=="2015") %>% 
+  group_by(CVE_ENT, ENT) %>% 
+  summarise (mediaIM=mean(IM)) %>% 
+  mutate(id=CVE_ENT) -> #Renombre CVE_ENT a id para que coincida con el nomnre de columna del data.frame del mapa. 
+  mediaIM
+#kable(mediaIM, caption="Sumario de datos. Nótese que CVE_ENT coincide con CVE_ENT")
+
+#Llamo finalmente a ggplot()
+
+ggplot(mediaIM, aes(map_id = id)) +   #map_id es un aes exclusivo de geom_map y ahí va la clave de empate.
+    geom_map(aes(fill = mediaIM), #En fill= va la variable de color.
+             map = capa_estados_df) +   #El mapa es el objeto SPDF fortificado. 
+  expand_limits(x = capa_estados_df$long, y = capa_estados_df$lat)  #Si no alcanza el espacio para tanto México ;)
+
+#Un principio. Vamos a ver si se puede mejorar. 
+
+ggplot(mediaIM, aes(map_id = id)) + 
+  geom_map(aes(fill = mediaIM), map = capa_estados_df) + 
+  expand_limits(x = capa_estados_df$long, y = capa_estados_df$lat) +
+  scale_fill_continuous(low="green", high="red") #Cambio el código de colores. 
+```
+
+##Con datos de ~~INEGI~~ http://www.gadm.org/. 
+
+```{r}
+#Importo y preparo los datos
+#===========================
+
+library(rgdal)
+library(rgeos)   #Creo que no hace falta...
+library(mapproj) #Para cambiar las proyecciones. 
+#estados <-readOGR(".", layer="areas_geoestadisticas_estatales")
+estados_poly <- readRDS("MEX_adm1.rds") #Directo a R. 
+estados_df <- fortify(estados_poly)     #Lo paso a data.frame
+marginacion <- Base_Indice_de_marginacion_municipal_90_15 <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/datos/Base_Indice_de_marginacion_municipal_90-15.csv", 
+    col_types = cols(`AÑO` = col_character()), 
+    locale = locale(encoding = "UTF-8")) %>%  
+      mutate (POB_TOT=gsub(" ","", POB_TOT)) %>%
+      mutate(POB_TOT=as.integer(POB_TOT)) %>%
+      filter(ENT!="Nacional")
+
+
+marginacion %>%
+  filter(AÑO=="2015") %>% 
+  group_by(CVE_ENT, ENT) %>% 
+  summarise (mediaIM=mean(IM)) %>% 
+  mutate(id=as.numeric(CVE_ENT)) -> #Nótese que as.numeric. else los 10 primeros estados no plotean. 
+  mediaIM
+
+
+#=======================
+ggplot(mediaIM, aes(map_id = id)) +   #map_id es un aes exclusivo de geom_map y ahí va la clave de empate.
+    geom_map(aes(fill = mediaIM), 
+             map = estados_df) + 
+    expand_limits(x = estados_df$long, y = estados_df$lat) + 
+  theme_minimal() #Funciona. Van en serie. 
+
+#Oma-haa!
+
+ggplot(mediaIM, aes(map_id = id)) +   #map_id es un aes exclusivo de geom_map y ahí va la clave de empate.
+    geom_map(aes(fill = mediaIM), 
+             map = estados_df) + 
+    expand_limits(x = estados_df$long, y = estados_df$lat) + coord_map ("cylindrical") + theme_void() + labs(title="Proyeccción cilíndrica")
+
+ggplot(mediaIM, aes(map_id = id)) +   #map_id es un aes exclusivo de geom_map y ahí va la clave de empate.
+    geom_map(aes(fill = mediaIM), 
+             map = estados_df) + 
+    expand_limits(x = estados_df$long, y = estados_df$lat) + coord_map ("gilbert") + theme_void() + labs(title="Proyeccción Gilbert")
+
+ggplot(mediaIM, aes(map_id = id)) +   #map_id es un aes exclusivo de geom_map y ahí va la clave de empate.
+    geom_map(aes(fill = mediaIM), 
+             map = estados_df) + 
+    expand_limits(x = estados_df$long, y = estados_df$lat) + coord_map ("lagrange") + theme_void() + labs(title="Proyeccción Lagrange")
+
+#OMA-HA!
+
+marginacion %>%
+  filter(AÑO=="2015") %>% 
+  group_by(CVE_ENT, ENT) %>% 
+  summarise (`mediaPL>5000`=mean(`PL<5000`), mediaANALF=mean(ANALF), mediaPO2SM=mean(PO2SM), mediaOVSAE=mean(OVSAE)) %>% 
+  mutate(id=as.numeric(CVE_ENT)) %>% 
+  ungroup () %>% 
+  select(-CVE_ENT) %>% 
+  gather(., clave, valor, -id, -ENT) ->   mediaIM
+
+ggplot(mediaIM, aes(map_id = id)) +   #map_id es un aes exclusivo de geom_map y ahí va la clave de empate.
+    geom_map(aes(fill = valor), map = estados_df) + 
+    expand_limits(x = estados_df$long, y = estados_df$lat) + 
+  facet_wrap(~clave) +
+  scale_fill_continuous(low="green", high="red") + 
+  theme_void()
+
+```
+#Pendientes: 
+
+~~1. Arreglar el problema de las coordenadas (coord_map). 
+1.1. NO es un problema de memoria insuficiente, aunque sea el que reporte. En una ocasión me lo rebotó con 72ks.
+1.2. El mapa de hadley de NZ funciona sin problemas. 
+1.2. Me parece que el problema es son las coordenadas que importo en el objeto SPDF. Lo números se ven muy grandes. Referencia: CDMX lat aprox 20°. Voy a probar con los shapefiles de inegi. 
+1.2.1. O es normal e INEGI lo hace así
+1.3. O hay un error en la importación.~~
+
+Hay un problema con los shapefiles del INEGI. 
+
+2. Ver como agregar etiquetas. 
+2.1. Es un problema de empatar estructuras de datos al mismo largo. 
+2.2. Debería ir en el mismo df que las etiquetas lat y long del centroide del estado. 
+2.3. El problema entonces es encontrar los centroides de cada polígono... 
+  
