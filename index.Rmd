@@ -41,3 +41,15 @@ Le viene incluyendo todo lo que es...
     - Con una función vectorizada. 
     - Con un join de bases de datos. 
 - Benchmarks. 
+
+##[Cartografía con R. (beta)](https://martinpaladino.github.io/Mapas_con_R.html)
+
+Pruebas de cartografía en R. 
+
+Le viene incluyendo todo lo que es...
+
+- Importación de shapefiles. 
+    - Incluyendo un problema sin solución --aún-- con los shapefiles del INEGI. 
+- Mapas coropléticos con ggplot(). 
+    - Con geom_map()
+    - Y geom_polygon()
