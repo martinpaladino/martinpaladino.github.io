@@ -40,7 +40,7 @@ Nota aparte merece el sistema de coordenadas que utiliza INEGI, también definid
     - La cartografía de google maps está disponible a través de una API y R tiene varios clientes para esa API. El problema señalado de los diferentes sistemas de coordenadas dificulta su aprovechamiento. 
     - R tiene la librería `mapproj::` para proyección de mapas y ggplot nos permite utilizarla facilmente con `coord_map()`. Sin embargo esta librería sólo admite coordenadas geográficas, por lo que no podemos utilizarla con datos crudos del INEGI. 
     
-#Cartografía con R. Primera prueba. 
+#Mapas coropléticos de México con R.  
 
 Este es un primer intento de generar cartografía a partir de R. 
 
@@ -58,7 +58,7 @@ Vamos a utilizar al Estado como unidad territorial, para mantener las cosas simp
 - Descomprimimos **todos** los archivos del .zip en el directorio de trabajo. 
     - Usamos `getwd()` para saber cuál es nuestro directorio de trabajo. 
 
-###Importación de capas y mapa plano.
+###Importación de capas y mapas simples.
 
 ```{r}
 library(rgdal)
@@ -88,21 +88,24 @@ ggplot() +
   geom_polygon(data=capa_estados, aes(x=long, y=lat, group=group), 
                fill="white", color="black") #Simplemente pasé las líneas a negro y el relleno a blanco fuera de aes(). 
 
+
 ```
 
-Obtuvimos un mapa completo de México. Valdría la pena hacer un mapa coroplético en l que coloreamos a cada Estado  por la media de Marginación Municipal. Para eso deberíamos agregar un `fill=` en ggplot2, pero antes debemos resolver el problema de las estructuras de datos. Por el momento la información geográfica está en una estructura de lista -no data.frame- y tiene una entrada por cada curva en los polígonos. Es decir, debemos pasar el objeto SPDF a data.frame y encontrar la manera de compatibilizar dos estructuras de datos con largos diferentes: la del mapa con un fila por cada curva de polígono y la de las medias del Índice de Marginación, con 32 filas, una por cada Entidad Federativa. 
+Obtuvimos un mapa completo de México. Valdría la pena hacer un mapa coroplético en l que coloreamos a cada Estado  por la media de Marginación Municipal. 
+
+###Colorear los Estados por la media del IM. Con join. Más complejidad, más control.
+
+El elemento geométrico primitivo que ggplot2 utiliza para generar mapas a partir de polígonos --como los que importamos desde shapefiles-- es `geom_polygon()`. El data.frame resultante de la conversión de un objeto SPDF es sumamente largo, tiene una fila por cada cambio en un polígono y un columna de grupo para separar cada polígono. Para un mapa coroplético podriamos usar el argumento `fill=` para los polígonos. Antes debemos resolver el problema de las estructuras de datos. Por el momento la información geográfica está en una estructura de lista -no data.frame- y tiene una entrada por cada curva en los polígonos. Es decir, debemos pasar el objeto SPDF a data.frame y encontrar la manera de compatibilizar dos estructuras de datos con largos diferentes: la del mapa con un fila por cada curva de polígono y la de las medias del Índice de Marginación, con 32 filas, una por cada Entidad Federativa. 
 Haremos lo siguiente: 
 
 1. Crear un data frame con el sumario estadístico, en este caso las medias por entidad. Deberá incluir una clave en común el data.frame de polígonos. 
 2. Convertir el objeto SPDF a data.frame.
-3. Aplicar un join para unir ambas estructuras de datos. 
+3. Aplicar un join para unir ambas estructuras de datos. El dato de interés que controlará el color se repetirá una vez por cada fila, de modo que los largos sean iguales. `dplyr::inner_join()` se encarga de hacerlo. 
 4. Producir el mapa con el elemento geométrico `geom_polygon()`, agregando un argumento `fill()`
-
-###Colorear los Estados por la media del IM. Con join. Más comlejidad, mayor control.
 
 ```{r, error=T}
 #Cargo la base de marginación y la limpio. 
-marginacion <- Base_Indice_de_marginacion_municipal_90_15 <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/datos/Base_Indice_de_marginacion_municipal_90-15.csv", 
+marginacion <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/datos/Base_Indice_de_marginacion_municipal_90-15.csv", 
     col_types = cols(`AÑO` = col_character()), 
     locale = locale(encoding = "UTF-8")) %>%  
       mutate (POB_TOT=gsub(" ","", POB_TOT)) %>%
@@ -114,33 +117,30 @@ marginacion %>%
   filter(AÑO=="2015") %>% 
   group_by(CVE_ENT, ENT) %>% 
   summarise (mediaIM=mean(IM)) %>% 
-  mutate(id=CVE_ENT) -> #Renombre CVE_ENT a id para que coincida con el nomnre de columna del data.frame del mapa. 
+  mutate(id=CVE_ENT) -> #Renombre CVE_ENT a id para que coincida con el nomnre de columna del data.frame de los polígonos. 
   mediaIM
 
-#Una df de 32x2 con CVE_ENT igual al SPDF. Algo es algo...
+mediaIM
 
-#Intento un join. 
-inner_join (capa_estados, marginacion, by ="id")
-#No se puede, el objeto SPDF es una lista, inner_join() sólo trabaja con data.frame. Al menos mensaje de error es comprensible. 
+#Un df de 32x4 con "id" igual al SPDF.
 
 #Paso el objeto SPDF a data.frame con `fortify()`, una función de ggplot2 con métodos para convertir objetos diversos a data.frame.
 
-capa_estados_df <- fortify(capa_estados, region="CVE_ENT") #region="CVE_ENT", el agrupamiento.   
+capa_estados_df <- fortify(capa_estados, region="CVE_ENT") #region="CVE_ENT", el agrupamiento de los polígonos. Coincide en nombre y contenido con mediaIM$id.    
 
-class(capa_estados_df) #Exito! ahora es un data.frame
-
-capa_estados_df_mediaIM <- inner_join(capa_estados_df, mediaIM, by="id") #Uno las medias con los polígonos.
+capa_estados_df_mediaIM <- inner_join(capa_estados_df, mediaIM, by="id") #Uno las medias con los polígonos por la variable clave: id.
 
 head(capa_estados_df_mediaIM)   #La media se repite una vez por punto de polígono, unidas por id. 
 
-#Este mapa está MAL. El df sale en blanco, edomex me da la mayor media (no es el caso).
-ggplot() +  
-  geom_polygon(data=capa_estados_df_mediaIM, aes(x=long, y=lat, group=group, fill=mediaIM)) #El argumento group=group arma grupos tanto para para los polígonos como para `fill=`. 
+ggplot(capa_estados_df_mediaIM) +  
+  geom_polygon(aes(x=long, y=lat, 
+                   group=group,      #El argumento group=group arma grupos tanto para para los polígonos como para `fill=`. 
+                   fill=mediaIM))    #Aquí especifico la columna que controla los colores. 
 ```
 
-###Colorear los Estados por la media del IM. Con geom_map. 
+###Colorear los Estados por la media del IM. Con `geom_map()` 
 
-ggplot2 tiene un elemento geométrico específico para generar mapas. Usa el primitivo `geom_polygon()`, como lo hicimos en el ejercicio anterior, pero permite especificar directamente el mapa y autoomatiza el manejo de múltiples estructuras de datos. Por lo tanto no es necesario hacer unir previamente las estructuras de datos.  
+ggplot2 tiene un elemento geométrico específico para generar mapas. Usa el primitivo `geom_polygon()`, como lo hicimos en el ejercicio anterior, pero permite especificar directamente el mapa y automatiza el manejo de múltiples estructuras de datos. Por lo tanto no es necesario hacer unir previamente las estructuras de datos. Esto simplifica la   
 
 ```{r}
 #Crear un data.frame con los polígonos, incluyendo "CVE_ENT"
@@ -150,40 +150,46 @@ library(rgeos) #La requiere. Ver http://stackoverflow.com/questions/30790036/err
 
 #Sintaxis de geom_map.
 
-ggplot(mediaIM, aes(map_id = id)) +   #map_id es un aes exclusivo de geom_map y ahí va la clave de unión. Nos ahorra el join previo. 
-    geom_map(aes(fill = mediaIM), #En fill= va la variable de color.
-             map = capa_estados_df) +   #El mapa es el objeto SPDF fortificado. 
-  expand_limits(x = capa_estados_df$long, y = capa_estados_df$lat)  #Si no no alcanza el espacio para tanto México ;)
+ggplot(mediaIM,                          #Los datos que pasamos a ggplot son el resumen estadístico de intereés, NO el mapa.  
+       aes(map_id = id)) +               #map_id es la columna con la clave de unión. Nos ahorra el join previo. 
+    geom_map(aes(fill = mediaIM),        #fill= columna que controla el color.
+             map = capa_estados_df) +    #map= objeto SPDF convertido a data.frame. 
+  expand_limits(x = capa_estados_df$long, y = capa_estados_df$lat)  #Especificamos el tamaño del mapa al máximo de lat y long.
+```
 
-#Un principio. Vamos a ver si se puede mejorar. 
+Obtuvimos el resultado que buscábamos y el un mapa explortorio aceptable. Sin embargo podemos mejorarlo usando la sintaxis usual de ggplot2. Esta es la gran ventaja de usar una misma librería para todos nuestros gráficos: conociendo una sintaxis podemos modificar muchos tipos de gráficos, incluyendo mapas. Además podemos aplicar el mismo estilo visual. 
+En este caso usaremos `dplyr::` y `ggplot2::` para ajustar el gráfico. 
 
-#Creo datos más pertinentes. Media de IM municipal ponderada por población. 
-#Agrego una escala de distancia. 
-#Ubico la leyenda en un lugar en blanco del mapa. 
+1. Creando datos más pertinentes. Media de IM municipal ponderada por población. 
+2. Agregando una escala de distancia. Aprovechamos la proyección definida por INEGI, que en para el territorio mexicano es plana y está expresada en unidad de medida métrica. Esto no aplica de manera directa para cartografía generada a partir de coordenadas geográficas.  
+3. Ubicando la leyenda de colores, con el título bien formateado, en el Golfo de México, para aprovechar mejor el espacio. 
+4. Usando el código de colores semáforo, donde rojo marca una advertencia. 
+
+```{r}
 
 marginacion %>%
   filter(AÑO=="2015") %>% 
   group_by(CVE_ENT, ENT) %>% 
-  summarise (mediaIM=mean(IM), `Media IM \nPonderada por\npoblación` = weighted.mean(IM, POB_TOT)) %>% 
-  mutate(id=CVE_ENT) -> #Renombre CVE_ENT a id para que coincida con el nomnre de columna del data.frame del mapa. 
+  summarise (`Media IM \nPonderada por\npoblación` =     #Uso \n para insertar directamente saltos de línea
+               weighted.mean(IM, POB_TOT)) %>%           #weighted.mean() Media ponderada
+  mutate(id=CVE_ENT) ->
   mediaIM
-
-gather(mediaIM, vari, valor, -id, -CVE_ENT, -ENT)  #Paso los datos a formato largo.
 
 ggplot(mediaIM, aes(map_id = id)) + 
   geom_map(aes(fill = `Media IM \nPonderada por\npoblación`), map = capa_estados_df) + 
   expand_limits(x = capa_estados_df$long, y = capa_estados_df$lat) +
-  scale_fill_continuous(low="green", high="red") + #Cambio el código de colores. 
-  labs(title="Media del Índice de Marginación Municipal por Estados 2015", 
+  scale_fill_continuous(low="green", high="red") +                           #Cambio la escala contínua de colores.
+  labs(title="Media del Índice de Marginación Municipal por Estados 2015",   #Las anotaciones con la sintaxis usual de ggplot2::
        subtitle="Ponderado por población", 
-       caption="Elaboración propia. \n Datos geográficos: INEGI 2016. \n Datos de marginación: CONAPO 2015") +
-  theme_void() +
-  geom_errorbarh(aes(x=1.5e6, xmin=1.5e6-100000, xmax=1.5e6+100000, y=1000000), height=50000) + #Escala
-  annotate("text", x= 1.5e6, y=1.0e6+80000, label="200km", size=2) + #Nota de la escala. 
-  theme(legend.position = c(0.8, 0.7))
+       caption="Elaboración propia. \n Datos geográficos: INEGI 2016. \n Datos de estadísticos: CONAPO 2015") +
+  theme_void() +                                                             #Elimina escalas, marcas de coordenadas, etc. 
+  geom_errorbarh(aes(x=1.5e6, xmin=1.5e6-1e5, xmax=1.5e6+1e5, y=1e6), height=5e4) + #Uso una barra de error horizontal para la escala
+  annotate("text", x= 1.5e6, y=1.0e6+8e4, label="200km", size=2) +           #Nota de la escala +- 100000 metros=200km. 
+  theme(legend.position = c(0.8, 0.7))                                       #Ubico la leyenda dentro del gráfico en una zona vacia.
 ```
 
 ##Con coordenadas geográficas de http://www.gadm.org/. 
+Global Administrative Areas tiene objetos SPDF --formato nativo de R-- con polígonos administrativos de prácticamente todos los países del mundo con sistema de coordenadas geográficas . Al estar en formato de R no es necesario  importarlo, simplemente los cargamos a R. El proceso es más rápido.
 
 ```{r}
 #Importo y preparo los datos
@@ -192,7 +198,7 @@ ggplot(mediaIM, aes(map_id = id)) +
 library(rgdal)
 library(rgeos)   #Creo que no hace falta...
 library(mapproj) #Para cambiar las proyecciones. 
-#estados <-readOGR(".", layer="areas_geoestadisticas_estatales")
+
 estados_poly <- readRDS("MEX_adm1.rds") #Directo a R. 
 estados_df <- fortify(estados_poly)     #Lo paso a data.frame
 marginacion <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/datos/Base_Indice_de_marginacion_municipal_90-15.csv", 
@@ -221,12 +227,18 @@ ggplot(mediaIM, aes(map_id = id)) +
 ggplot(mediaIM, aes(map_id = id)) +   
     geom_map(aes(fill = mediaIM), 
              map = estados_df) + 
-    expand_limits(x = estados_df$long, y = estados_df$lat) + coord_map ("cylindrical") + theme_void() + labs(title="Proyeccción cilíndrica")
+    expand_limits(x = estados_df$long, y = estados_df$lat) + 
+  coord_map ("cylindrical") + 
+  theme_void() + 
+  labs(title="Proyeccción cilíndrica")
 
 ggplot(mediaIM, aes(map_id = id)) +   
     geom_map(aes(fill = mediaIM), 
              map = estados_df) + 
-    expand_limits(x = estados_df$long, y = estados_df$lat) + coord_map ("gilbert") + theme_void() + labs(title="Proyeccción Gilbert")
+    expand_limits(x = estados_df$long, y = estados_df$lat) + 
+  coord_map ("gilbert") + 
+  theme_void() + 
+  labs(title="Proyeccción Gilbert")
 
 ggplot(mediaIM, aes(map_id = id)) +   
     geom_map(aes(fill = mediaIM), 
@@ -337,46 +349,134 @@ google_tlax_terreno <- get_map(
 ggmap(google_tlax_terreno)
 
 #Agregamos una capa de divisiones políticas. 
-ggmap(google_tlax_terreno) + geom_polygon(data=tlaxcala_poly, #Los polígonos que ya tengo cargados. 
-                                          aes(x=long, y=lat, group=group), #El mapeo de datos a esos polígonos. 
-                                          color="black", fill=NA)+ #Evito que rellene con gris. 
+ggmap(google_tlax_terreno) + geom_polygon(data=tlaxcala_poly, aes(x=long, y=lat, group=group), color="black", fill=NA) #Evito que rellene con gris. 
   
 otro <- get_map(location = c(-99.1826, 19.378), source="google", maptype = "satellite", zoom = 20) 
 
-ggmap(otro)  + geom_label(x=-99.1826, y=19.3781, label="ÑOÑOS") + theme_void()
+#ggmap(otro)  + geom_label(x=-99.1826, y=19.3781, label="ÑOÑOS") + theme_void()
 ```
 
-##Importación de capas desde un teléfono celular. 
-La importación dependerá del formato de salida de la aplicación que estemos usando. En general importar .kml es infernal e importar .gpx un poco menos. 
-Para esto último usamos la función `readGPX()` del paquete plotKML. 
+##Importación de rutas desde un teléfono celular. 
+
+La importación dependerá del formato de salida de la aplicación que estemos usando. Las aplicaciones de GPS de los celulares generalmente permiten exportar las rutas en formato .kml (GoogleMaps) o GPX. En general importar .kml es R es complicado, porque hay encontrar el identificador de la ruta. Importar .gpx es más simple y por lo tanto el método preferido. 
+Para esto último usamos la función `readGPX()` del paquete plotKML. El formato .gpx es una especificación de xml para guardar rutas. De un archivo .gpx tiene cinco columnas: longitud, latitud, elevación, tiempo (año, mes, día, hora, minuto, segundo) y extensiones, que en la lista que regresa `readGPX()` están en `$tracks`. 
+
+El objetivo es plotear un mapa raster de la zona CDMX en la que está registrada una ruta y etiquetar algunos de los puntos con el tiempo acumulado desde la partida a la llegada. Lo primero es muy fácil, lo segundo no tanto, pues el manejo de horas y fechas no es fácil en R. 
+Sin embargo lo podemos hacer con un anónimo agradecimiento a [este cuate.](http://rcrastinate.blogspot.mx/2014/09/stay-on-track-plotting-gps-tracks-with-r.html)
 
 ```{r}
-library(plotKML)   #Levanta muchísimas dependencias. 
-bici <- readGPX("19_feb._2017_10_54_56.gpx") #Cargo la ruta de una bicicleteada. 
-bici <- bici$tracks %>% as.data.frame #Lo paso a data frame. 
-names(bici) <- c("lon", "lat", "ele", "time", "extensions") #Le arreglo los nombres. 
-ggplot(bici, aes(x=lon, y=lat)) +  geom_point() +  theme_minimal()
+#Arreglar la manipulación de datos, funciona pero tiene es un abuso de <- y $. Hacerla funcional y menos fea. 
+
+#Función de este cuate para mover un vector una fila hacia arriba. Sirve p calcular la diferencia de tiempo entre datapoints. Alerta: ¡copypasta!
+
+shift.vec <- function (vec, shift) {
+  if(length(vec) <= abs(shift)) {
+    rep(NA ,length(vec))
+  }else{
+    if (shift >= 0) {
+      c(rep(NA, shift), vec[1:(length(vec)-shift)]) }
+    else {
+      c(vec[(abs(shift)+1):length(vec)], rep(NA, abs(shift))) } } }
+
+library(plotKML)   #Levanta muchísimas dependencias en la instalación.
+
+bici <- as.data.frame(readGPX("19_feb._2017_10_54_56.gpx")$tracks) #Cargo la ruta y la paso a df.  
+
+names(bici) <- c("lon", "lat", "ele", "time", "extensions") #Le arreglo los nombres.
+
+ggplot(bici, aes(x=lon, y=lat)) +  geom_point() +  theme_minimal() #Prueba de puntos. 
+
+#Más copypasta de este cuate.
+
+bici$time <- strptime(bici$time, format = "%Y-%m-%dT%H:%M:%OS")   #Pasa time a fecha y hora POSIXt
+bici$time.p1 <- shift.vec(bici$time, -1)                          #Crea una vector nuevo, desplazado una fila.  
+bici$diferencia <- as.numeric(difftime(bici$time.p1, bici$time))  #Regresa la diferencia en segundos entre datapoints. 
+bici$acum <- round(cumsum(bici$diferencia)/60, 0)                 #Ojo! por el shift asigna un NA al final.
+
 #obtengo un mapa de la zona en google. 
 chilango <- get_map (location=c(-99.16, 19.425), source="google", maptype="terrain", zoom=12) 
-vector <- seq(1, 1662, 10)
-bici$tiempo <- ifelse (row_number(bici$time) %in% vector, bici$time, NA)
-ggmap(chilango) + geom_point(data=bici, aes(x=lon, y=lat)) +  geom_text(data=bici, aes(x=lon, y=lat, label=time))
+
+#Alerta de código orrible 2: seleccionar un data point cada 50, else NA. 
+
+vector <- seq(1, 1662, 50)
+bici$tiempo <- ifelse (row_number(bici$acum) %in% vector, bici$acum, NA)
+
+#Genero el mapa. 
+ggmap(chilango) + geom_point(data=bici, aes(x=lon, y=lat), size=.5) +  
+  geom_label_repel(data=bici, aes(x=lon, y=lat, label=tiempo))
 ```
 
 
 ##Funciones mágicas. 
 
-El paquete mxmaps, de Diego Valle. Está disponible directamente desde GitHub y tiene comandos simples para hacer mapas coropléticos de México. 
+El paquete mxmaps, de [Diego Valle](https://www.diegovalle.net/mxmaps/index.html), permite hacer mapas coropléticos de México con una sintaxis simplificada. Los mapas que retoman los datos de las bases incluidas no requieren casi ninguna especificación, sin embargo para extender la funcionalidad es necesario conocer el funcionamiento la estructura de la base de datos incluída y agregar las columnas adecuadas. Dado que hay múltiples variables de índice podemos usar un join para agregar capas de datos.
+La sintaxis básica para producir mapas a nivel municipios es `df_mxstate#value <- df_mxstate$variable_de_interés`, donde variable de interés es la que controlará el parámetro de color. Señalamos la variable de interés asignándola en la columna `$value`. Luego llamamos a la función `mxmunincipio_choroppleth(df_mxmunicipio)`, es decir, señalamos el data.frame incluido en la librería en el que previamente señalamos la variable de interés en `$values`. No es necesario especificar los polígonos, están incluidos por defecto. 
+Para mapas a nivel Estados usamos el data.frame `df_mxstate` y `mxstate_choropleth()`. 
 
-```{r}
+
+```{r, eval=FALSE}
+#Instrucciones para instalar el paquete, es necesario ejecutarlo sólo una vez. 
+#Mucha atención a los errores que regresa el instalador. El paquete tiene muchas dependencias no declaradas y hay que buscar cual produce el error, instalar ese paquete y así que hasta que funciona. 
+#advertencia: el paquete es alpha, es decir, muy temprano en la etapa de desarrollo y aparentemente no tiene desarrollo activo.  ¿abandonado?
 if (!require(devtools)) {
     install.packages("devtools")
 }
 devtools::install_github('diegovalle/mxmaps') #En mi compu no instala. :-(
 ```
 
-~~2. Ver como agregar etiquetas. 
-2.1. Es un problema de empatar estructuras de datos al mismo largo. 
-2.2. Debería ir en el mismo df que las etiquetas lat y long del centroide del estado. 
-2.3. El problema entonces es encontrar los centroides de cada polígono... se hace con sp::coordinates()
-  
+```{r}
+library(mxmaps)
+#A nivel estatal. 
+
+df_mxstate$value <- df_mxstate$pop
+mxstate_choropleth(df_mxstate, title="Población por Estados")
+mxhexbin_choropleth(df_mxstate, title="Población por Estados")  #Los presenta como hexágonos uniformes. 
+
+#A nivel municipal. 
+
+df_mxmunicipio$value <- df_mxmunicipio$pop_male - df_mxmunicipio$pop_female #Diferencia entre población masculina y femenina. 
+mxmunicipio_choropleth(df_mxmunicipio, title="Diferencia entre población masculina y femina")
+
+#Agregando datos no incluidos en el paquete.
+
+marginacion$region <- marginacion$`<U+FEFF>CVE_MUN`
+df_mxmunicipio <- inner_join(df_mxmunicipio, filter(marginacion, AÑO=="2015"), by="region") #Hago un join por Clave de Municipio y empato ambas bases. Filtro marginacion directamente en la llamada porque la transparencia referencial de R me lo permite. 
+df_mxmunicipio %>% str()    #Le agregué todas las variables del IM. 
+
+df_mxmunicipio$value <- df_mxmunicipio$GM     #GM lo trahe del otro data.frame
+mxmunicipio_choropleth(df_mxmunicipio) +  
+  labs(title="Grado de marginación municipal", 
+       subtitle="Mapeado con mxmaps",
+       caption="Datos estadísticos CONAPO\nDatos geográficos ¿?") +
+  coord_map("azequalarea") +                 #No tengo idea de lo que estoy haciendo.
+  scale_fill_manual(values=c("red", "orange", "yellow", "red4", "green"))
+```
+
+#Unas series de tiempo para ir calentando motores...
+ 
+```{r, include=FALSE}
+token <- "7bb701f8-91b3-2f96-4bcc-db5aea06d87c"   #Sáquese la suya en http://www3.inegi.org.mx//sistemas/api/indicadores/v1/tokenVerify.aspx 
+```
+
+```{r}
+library(inegiR)     #Para extraer datos directamente del INEGI a R. 
+library(ggpmisc)
+series_produccion_autos(token) %>%     #Serie de producción de autos. 
+  mutate(mes = format(Fechas, "%m"), anio = format(Fechas, "%Y")) %>% 
+  group_by(anio) %>% 
+  summarise(anual=sum(Autos)) %>% 
+  ggplot(aes(x=anio, y=anual, group=1)) +  
+  geom_line() + 
+  labs(title="Producción anual de automóviles en México", subtile="Extracción de datos directa del INEGI", datos="INEGI") +  theme_minimal()
+
+
+series_produccion_autos(token) %>% 
+  ggplot(aes(x=as.POSIXct(Fechas), y=Autos, group=1)) +  
+  geom_line() + 
+ # stat_peaks(ignore_threshold = 0.4, strict=T) + 
+ # stat_valleys(ignore_threshold = 0.4, strict=T) + 
+    stat_peaks(geom = "text", angle = 90,hjust = -0.1, x.label.fmt = "%b%y",  ignore_threshold = 0.4, strict = T) + stat_valleys(geom = "text", angle = 90,hjust = 1.5, x.label.fmt = "%b%y",  ignore_threshold = 0.4, strict = T) + stat_smooth() + 
+  theme_minimal() + labs(title="Producción mensual de automóviles en México", 
+                         subtile="Ajuste por regresión local. Picos y valles.", 
+                         datos="INEGI")  
+```
