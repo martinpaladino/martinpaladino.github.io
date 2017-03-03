@@ -1,8 +1,14 @@
 ---
 title: "Mapas con ggplot"
-author: "Martín Paladino"
-date: "27 de febrero de 2017"
-output: html_document
+author: 
+- Martín Paladino^[mpaladino@mora.edu.mx]
+date: "3 de marzo de 2017"
+output: 
+  html_document: 
+    highlight: textmate
+    number_sections: yes
+    theme: journal
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -11,11 +17,41 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #Introducción 
 
+##Acerca de este documento. 
+
+Este documento presenta algunos ejercicios básicos de cartografía digital con R y `ggplot2::`. En modo representa las capacidades completas de este software para el manejo de sistemas de información geográfica y tampoco se propone presentar resultados pertinentes de investigación. Simplemente presenta algunos objetivos y los pasos técnicos necesarios para llevarlos a cabo. 
+
+###¿Por qué `ggplot2::` para producir mapas?
+
+Si estamos usando `ggplot2::` para el resto de los gráficos de nuestro trabajo mantenernos en el misma librería de funciones para los mapas tiene mucho sentido.
+
+- Nos permite mantener un estilo visual unificado con poco esfuerzo: todos los gráficos -incluyendo mapas- tendrán la misma tipografía, tamaño relativo, convención de títulos y viñetas, colores o formas, etc. 
+
+- Nos permite sacar provecho de una sintaxis que ya conocemos. Al producir objetos de la clase `ggplot2` podemos modificar muchos aspectos de estos mapas con la misma sintaxis que usamos para cualquier otro gráficos. Las funciones `labs()` y `annotate()`producen anotaciones, `scale_fill_*()` nos permite usar paletas personalizadas de colores, etc. 
+
+- Nos permite aprovechar algunas extensiones generales de R y aplicarlas a mapas. Por ejemplo, `ggreppel()` para evitar la superposición de etiquetas.
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(knitr)
+tribble(~Tema,                 ~Métodos                            , ~`Librería y función`,
+        "Importación de datos", "Desde shapefiles .shp"            ,"`rgdal::readOGR()`", 
+        ""                    , "Raster desde la API de GoogleMaps","`ggmap::get_map()`", 
+        ""                    , "Rutas desde un teléfono celular"  ,"`plotKML::readGPX()`",
+        "Mapas coropléticos"  , "Con polígonos primitivos"         ,"`ggplot2:: geom_polygon()`", 
+        ""                    , "Con mapas+datos"                  ,"`ggplot() +  geom_map()`", 
+        ""                    , "Con una función ad hoc"           ,"`mxmaps::`",
+        "Etiquetado de mapas" , "Como texto"                       ,"`ggplot2::geom_label`", 
+        ""                    , "Ubicación en centroides"          ,"`sp::coordinates()`", 
+        ""                    , "Etiquetado parcial"               ,"`ifelse() + ggreppel::geom_label_repel()`"
+        ) %>% kable(.,caption="Temas cubiertos en este documento.")
+```
+
 ##Nota sobre la información geográfica del INEGI y los sistemas de coordenadas. 
 
-El INEGI tiene puestos a disposició del público shapefiles con distintos niveles de información. Sin considerar los históricos esta información se regular por el Marco Geoestadístico Censal, cuya última versión es de 2016. Incluye las siguientes divisiones y subdivisiones del territorio: 
+El INEGI tiene puestos a disposición del público shapefiles con distintos niveles de información. Sin considerar los históricos esta información se regular por el Marco Geoestadístico Censal, cuya última versión es de 2016. Incluye las siguientes divisiones y subdivisiones del territorio: 
 
-Table: Subdividivisiones territoriales básicas del INEGI. 
+Table: Subdivisiones territoriales básicas del INEGI. 
 
 Código | División    | Unidades territoriales
 -------|-------------|------------------------
@@ -24,26 +60,34 @@ AGEM   | Municipales | 2458
 AGEB   | Censal      | 17470
 PLUR   | Localidades | 49498
 
-Nota aparte merece el sistema de coordenadas que utiliza INEGI, también definido en el el Marco Geoestadístico Censal 2016. La definición técnica es  MEXICO_ITRF_2008_LCC, con proyección Cónica Conforme de Lambert  (CCL) y datum es ITRF2008. Se trata de un sistema de coordenadas rectangular, cuya unidad de medida es el *metro*. Esta cuadricula cubre el espacio entre los paralelos 17.5N y 29.5N con el meridiano 102 como centro. En términos prácticos esto tiene alguas implicaciones: 
+Nota aparte merece el sistema de coordenadas que utiliza INEGI, también definido en el el Marco Geoestadístico Censal 2016. La definición técnica es  MEXICO_ITRF_2008_LCC, con proyección Cónica Conforme de Lambert  (CCL) y datum es ITRF2008. Se trata de un sistema de coordenadas rectangular, cuya unidad de medida es el *metro*. Esta cuadricula cubre el espacio entre los paralelos 17.5N y 29.5N con el meridiano 102 como centro. En términos prácticos esto tiene algunas implicaciones: 
 
 - La cartografía que generemos a partir de shapefiles del INEGI se expresa directamente en una proyección ad hoc para México. Por lo tanto:
     - Podemos esperar mapas con pocas deformaciones. 
-    - Al utilizar unidades rectas para expresar la distancia (y no grados, minutos, segundos, unidades de arco) es fácil interpretar la escala de nuestros gráficos. Esta es razonablemente homogenea.  
+    - Al utilizar unidades rectas para expresar la distancia (y no grados, minutos, segundos, unidades de arco) es fácil interpretar la escala de nuestros gráficos. Esta es razonablemente homogénea.  
     - La mayor parte de la información geográfica que producen las instituciones gubernamentales de México (INEGI, CONAPO, CONABIO, etc.) utiliza este mismo marco de referencia, por lo que podemos combinar estas capas sin mayores inconvenientes. El INE es un caso aparte, su sistema de información geográfica es diferente. 
     
-- Sin embargo otras capas de información geográfica pudieramos aprovechar y que se produce fuera de la órbita de estas instituciones suele estar expresada en otro sistema de coordenadas. Por ejemplo, en unidades hexadecimales de arco, es decir, latitud y longitud medidas en grados, minutos y segundos. Por lo tanto:
+- Sin embargo otras capas de información geográfica pudiéramos aprovechar y que se produce fuera de la órbita de estas instituciones suele estar expresada en otro sistema de coordenadas. Por ejemplo, en unidades hexadecimales de arco, es decir, latitud y longitud medidas en grados, minutos y segundos. Por lo tanto:
     - No podemos unir esas capas sin una transformación previa, de lo contrario la ubicación de los polígonos no va a ser compatible. 
         - Debemos llevar la información no INEGI al sistema de INEGI o viceversa. 
-            - INEGI dispone de una app en línea para convertir información en Lat Long a lcc en http://www.inegi.org.mx/geo/contenidos/geodesia/traninv.aspx. Hasta ahora no he visto una opción para convertir una base de puntos datos completa y mucho menos polígonos. Debemos transformar punto por punto. 
+            - INEGI dispone de una app en línea para convertir información en lat- long a lcc en http://www.inegi.org.mx/geo/contenidos/geodesia/traninv.aspx. Hasta ahora no he visto una opción para convertir una base de puntos datos completa y mucho menos polígonos. Debemos transformar punto por punto. 
             - No encontré una función o librería en R que nos permita hacer este traspaso de manera simple, aunque no he sido exhaustivo en la búsqueda. 
         - http://www.gadm.org/ dispone de shapefiles y objetos geoespaciales SPDF de R (.rds) de México, subdivididos hasta nivel municipal con un sistema de coordenadas geográficas. Se trata de archivos pequeños que se cargan directamente en R sin necesidad de importación. Sin embargo no dispone de unidades territoriales menores al municipio, red caminera, áreas y recursos naturales ,etc. y no es fuente oficial. Tampoco podemos estar completamente seguros de su actualización. Úselo bajo su propia responsabilidad.  
-    - La cartografía de google maps está disponible a través de una API y R tiene varios clientes para esa API. El problema señalado de los diferentes sistemas de coordenadas dificulta su aprovechamiento. 
-    - R tiene la librería `mapproj::` para proyección de mapas y ggplot nos permite utilizarla facilmente con `coord_map()`. Sin embargo esta librería sólo admite coordenadas geográficas, por lo que no podemos utilizarla con datos crudos del INEGI. 
+    - La cartografía de GoogleMaps está disponible a través de una API y R tiene varios clientes para esa API. El problema señalado de los diferentes sistemas de coordenadas dificulta su aprovechamiento. 
+    - R tiene la librería `mapproj::` para proyección de mapas y ggplot nos permite utilizarla fácilmente con `coord_map()`. Sin embargo esta librería sólo admite coordenadas geográficas, por lo que no podemos utilizarla con datos crudos del INEGI. 
     
 #Mapas coropléticos de México con R.  
 
-Este es un primer intento de generar cartografía a partir de R. 
+Los mapas coropléticos representan polígonos de unidades territoriales a los que se asigna un color de acuerdo al valor de una variable pertinente. Este color puede representar tanto una  escala continua -en la que se genera un degradado continuo de color- o una escala discreta -en la que cada categoría de esa variable tiene un color asignado. 
 
+El procedimiento en R usando `ggplot2::` es el siguiente: 
+
+1. Importar los polígonos con los contornos de las unidades territoriales. Esto producirá un objeto de la clase SPDF o Spatial Polygon Data Frame. 
+- Los objetos SPDF no son directamente un data.frame, en sentido estricto pertenecen a la clase `list`. Sin embargo se transforman fácilmente a data.frame. 
+- Fueron incorporados en R a partir de la librería `sp::`, un conjunto de clases y métodos para datos espaciales. `sp::` es la librería primitiva para información geográfica en R, prácticamente todas las demás depende de un modo u otro de las especificaciones, funciones y métodos de `sp::`.
+2. Unir los datos estadísticos que controlarán el color con la estructura de datos poligonal. 
+- A través de un join o con el método simplificado de `geom_map()`. 
+3. Generar el mapa con una llamada a `ggplot()` y los elementos geométricos `geom_polygon()` o `geom_map()`.
 
 ##Unidad territorial: Estados. 
 
@@ -53,7 +97,7 @@ Vamos a utilizar al Estado como unidad territorial, para mantener las cosas simp
 
 - Descargamos desde acá http://www.conapo.gob.mx/es/CONAPO/Datos_Abiertos_del_Indice_de_Marginacion los datos de marginación del CONAPO a nivel municipal. Se pueden agregar por Estados. 
 
-- Descagamos los shapefiles del Marco Geoestadístico 2016 del sitio del INEGI (202MB) desde este enlace:  http://internet.contenidos.inegi.org.mx/contenidos/productos//prod_serv/contenidos/espanol/bvinegi/productos/geografia/marc_geo/702825217341_s.zip 
+- Descargamos los shapefiles del Marco Geoestadístico 2016 del sitio del INEGI (202MB) desde este enlace:  http://internet.contenidos.inegi.org.mx/contenidos/productos//prod_serv/contenidos/espanol/bvinegi/productos/geografia/marc_geo/702825217341_s.zip 
 
 - Descomprimimos **todos** los archivos del .zip en el directorio de trabajo. 
     - Usamos `getwd()` para saber cuál es nuestro directorio de trabajo. 
@@ -62,8 +106,6 @@ Vamos a utilizar al Estado como unidad territorial, para mantener las cosas simp
 
 ```{r}
 library(rgdal)
-library(tidyverse)
-
 #Cargo el shapefile de los estados y lo asigno a capa_estados.
 #"." es el directorio, layer="Estados" el archivo .shp, pero sin la extensión, ya que readOG
 
@@ -91,11 +133,11 @@ ggplot() +
 
 ```
 
-Obtuvimos un mapa completo de México. Valdría la pena hacer un mapa coroplético en l que coloreamos a cada Estado  por la media de Marginación Municipal. 
+Obtuvimos un mapa completo de México. Valdría la pena hacer un mapa coroplético en el que coloreamos a cada Estado  por la media de Marginación Municipal. 
 
 ###Colorear los Estados por la media del IM. Con join. Más complejidad, más control.
 
-El elemento geométrico primitivo que ggplot2 utiliza para generar mapas a partir de polígonos --como los que importamos desde shapefiles-- es `geom_polygon()`. El data.frame resultante de la conversión de un objeto SPDF es sumamente largo, tiene una fila por cada cambio en un polígono y un columna de grupo para separar cada polígono. Para un mapa coroplético podriamos usar el argumento `fill=` para los polígonos. Antes debemos resolver el problema de las estructuras de datos. Por el momento la información geográfica está en una estructura de lista -no data.frame- y tiene una entrada por cada curva en los polígonos. Es decir, debemos pasar el objeto SPDF a data.frame y encontrar la manera de compatibilizar dos estructuras de datos con largos diferentes: la del mapa con un fila por cada curva de polígono y la de las medias del Índice de Marginación, con 32 filas, una por cada Entidad Federativa. 
+El elemento geométrico primitivo que ggplot2 utiliza para generar mapas a partir de polígonos --como los que importamos desde shapefiles-- es `geom_polygon()`. El data.frame resultante de la conversión de un objeto SPDF es sumamente largo, tiene una fila por cada cambio en un polígono y un columna de grupo para separar cada polígono. Para un mapa coroplético podríamos usar el argumento `fill=` para los polígonos. Antes debemos resolver el problema de las estructuras de datos. Por el momento la información geográfica está en una estructura de lista -no data.frame- y tiene una entrada por cada curva en los polígonos. Es decir, debemos pasar el objeto SPDF a data.frame y encontrar la manera de compatibilizar dos estructuras de datos con largos diferentes: la del mapa con un fila por cada curva de polígono y la de las medias del Índice de Marginación, con 32 filas, una por cada Entidad Federativa. 
 Haremos lo siguiente: 
 
 1. Crear un data frame con el sumario estadístico, en este caso las medias por entidad. Deberá incluir una clave en común el data.frame de polígonos. 
@@ -103,7 +145,7 @@ Haremos lo siguiente:
 3. Aplicar un join para unir ambas estructuras de datos. El dato de interés que controlará el color se repetirá una vez por cada fila, de modo que los largos sean iguales. `dplyr::inner_join()` se encarga de hacerlo. 
 4. Producir el mapa con el elemento geométrico `geom_polygon()`, agregando un argumento `fill()`
 
-```{r, error=T}
+```{r}
 #Cargo la base de marginación y la limpio. 
 marginacion <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/datos/Base_Indice_de_marginacion_municipal_90-15.csv", 
     col_types = cols(`AÑO` = col_character()), 
@@ -144,8 +186,6 @@ ggplot2 tiene un elemento geométrico específico para generar mapas. Usa el pri
 
 ```{r}
 #Crear un data.frame con los polígonos, incluyendo "CVE_ENT"
-library(rgeos) #La requiere. Ver http://stackoverflow.com/questions/30790036/error-istruegpclibpermitstatus-is-not-true  
-
 #Retomo las estructuras de datos que ya cree: capa_estados_df y mediaIM. 
 
 #Sintaxis de geom_map.
@@ -157,7 +197,7 @@ ggplot(mediaIM,                          #Los datos que pasamos a ggplot son el 
   expand_limits(x = capa_estados_df$long, y = capa_estados_df$lat)  #Especificamos el tamaño del mapa al máximo de lat y long.
 ```
 
-Obtuvimos el resultado que buscábamos y el un mapa explortorio aceptable. Sin embargo podemos mejorarlo usando la sintaxis usual de ggplot2. Esta es la gran ventaja de usar una misma librería para todos nuestros gráficos: conociendo una sintaxis podemos modificar muchos tipos de gráficos, incluyendo mapas. Además podemos aplicar el mismo estilo visual. 
+Obtuvimos el resultado que buscábamos y el un mapa exploratorio aceptable. Sin embargo podemos mejorarlo usando la sintaxis usual de ggplot2. Esta es la gran ventaja de usar una misma librería para todos nuestros gráficos: conociendo una sintaxis podemos modificar muchos tipos de gráficos, incluyendo mapas. Además podemos aplicar el mismo estilo visual. 
 En este caso usaremos `dplyr::` y `ggplot2::` para ajustar el gráfico. 
 
 1. Creando datos más pertinentes. Media de IM municipal ponderada por población. 
@@ -194,11 +234,7 @@ Global Administrative Areas tiene objetos SPDF --formato nativo de R-- con polí
 ```{r}
 #Importo y preparo los datos
 #===========================
-
-library(rgdal)
-library(rgeos)   #Creo que no hace falta...
-library(mapproj) #Para cambiar las proyecciones. 
-
+library(mapproj)
 estados_poly <- readRDS("MEX_adm1.rds") #Directo a R. 
 estados_df <- fortify(estados_poly)     #Lo paso a data.frame
 marginacion <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/datos/Base_Indice_de_marginacion_municipal_90-15.csv", 
@@ -207,7 +243,6 @@ marginacion <- read_csv("C:/Users/mpaladino/Dropbox/martinpaladino.github.io/dat
       mutate (POB_TOT=gsub(" ","", POB_TOT)) %>%
       mutate(POB_TOT=as.integer(POB_TOT)) %>%
       filter(ENT!="Nacional")
-
 
 marginacion %>%
   filter(AÑO=="2015") %>% 
@@ -271,7 +306,6 @@ ggplot(mediaIM, aes(map_id = id)) +
 ##Unidad territorial: Municipios de Tlaxcala. 
 
 ```{r}
-library(ggrepel)
 #Primer paso: cargar el shapefile de Tlaxcala con polígonos municipales. 
 
 tlaxcala_poly <- readOGR(".", "tlax_municipal")
@@ -320,6 +354,8 @@ ggplot(marginacion_tlaxcala, aes(map_id = id)) +
 marginacion_tlaxcala <- cbind(marginacion_tlaxcala, 
                               as.data.frame(coordinates(tlaxcala_poly))) #coordinates() regresa una matríz, tengo que pasarla a df antes de pegarla. Automáticamente les asignará los nombres V1 y V2. 
 
+library(ggrepel)
+
 ggplot(marginacion_tlaxcala, aes(map_id = id)) +  
   geom_map(aes(fill = IM), 
              map = tlaxcala_df) +  
@@ -331,14 +367,14 @@ ggplot(marginacion_tlaxcala, aes(map_id = id)) +
 
 ```
 
-##Importación de capas adicionales.
+#Importación de capas adicionales.
 
-Hay muchas formas de importar capas de datos adicionales. Aquí cubriremos una básica: importarlos directamente de GoogleMaps.
-La función `get_map()` de `ggmap::` permite importar mapas de GoogleMaps, OpenStreetMap, Stamen Maps y CloudMade.
-Debemos especificar las coordenadas que nos interesan como longitud-latitud (ene ese orden), el nive de zoon (donde 3 es un continente y 21 un edificio), el tipo de mapa ("terrain", "satellite", "roadmap", etc.). 
+Hay muchas formas de importar capas de datos adicionales. Aquí cubriremos una básica: importar directamente de GoogleMaps mapas raster sobre los que podemos graficar polígonos.
+La función `get_map()` de `ggmap::` permite importar mapas raster de GoogleMaps, OpenStreetMap, Stamen Maps y CloudMade. En general los mejores resultados se obtienen con GoogleMaps, que tiene un API estable y con buenos recursos. OSM tiene problemas frecuentes de no respuesta en los servidores y stamen cambia con frecuencia su API. 
+Debemos especificar las coordenadas que nos interesan como longitud-latitud (ene ese orden), el nivel de zoom (donde 3 es un continente y 21 un edificio), el tipo de mapa ("terrain", "satellite", "roadmap", etc.). 
 
 ```{r}
-library(ggmap) 
+library(ggmap)
 google_tlax_terreno <- get_map(
   location=c(-98, 19.4),     #Long y lat del centro del mapa que buscamos
   source="google",           #Fuente, tb OpenStreetView
@@ -351,9 +387,6 @@ ggmap(google_tlax_terreno)
 #Agregamos una capa de divisiones políticas. 
 ggmap(google_tlax_terreno) + geom_polygon(data=tlaxcala_poly, aes(x=long, y=lat, group=group), color="black", fill=NA) #Evito que rellene con gris. 
   
-otro <- get_map(location = c(-99.1826, 19.378), source="google", maptype = "satellite", zoom = 20) 
-
-#ggmap(otro)  + geom_label(x=-99.1826, y=19.3781, label="ÑOÑOS") + theme_void()
 ```
 
 ##Importación de rutas desde un teléfono celular. 
@@ -361,22 +394,24 @@ otro <- get_map(location = c(-99.1826, 19.378), source="google", maptype = "sate
 La importación dependerá del formato de salida de la aplicación que estemos usando. Las aplicaciones de GPS de los celulares generalmente permiten exportar las rutas en formato .kml (GoogleMaps) o GPX. En general importar .kml es R es complicado, porque hay encontrar el identificador de la ruta. Importar .gpx es más simple y por lo tanto el método preferido. 
 Para esto último usamos la función `readGPX()` del paquete plotKML. El formato .gpx es una especificación de xml para guardar rutas. De un archivo .gpx tiene cinco columnas: longitud, latitud, elevación, tiempo (año, mes, día, hora, minuto, segundo) y extensiones, que en la lista que regresa `readGPX()` están en `$tracks`. 
 
-El objetivo es plotear un mapa raster de la zona CDMX en la que está registrada una ruta y etiquetar algunos de los puntos con el tiempo acumulado desde la partida a la llegada. Lo primero es muy fácil, lo segundo no tanto, pues el manejo de horas y fechas no es fácil en R. 
-Sin embargo lo podemos hacer con un anónimo agradecimiento a [este cuate.](http://rcrastinate.blogspot.mx/2014/09/stay-on-track-plotting-gps-tracks-with-r.html)
+El objetivo es generar un mapa raster de la zona CDMX en la que está registrada una ruta y etiquetar algunos de los puntos con el tiempo acumulado desde la partida a la llegada. Lo primero es muy fácil, lo segundo no tanto, pues el manejo de horas y fechas no es fácil en R. 
 
-```{r}
-library(plotKML)   #Levanta muchísimas dependencias en la instalación.
-
+```{r, fig.height=8, fig.width=8}
+library(plotKML)
 # Gráfico con inmutabilidad de datos. 
+#====================================
 #1. Importo, 
 #2. formateo el timestamp, 
 #3. Genero la suma acumulada de diferencia en minutos. 
 #4. Selecciono una fila cada 50
 #Grafico con etiquetas. 
-#Posibles mejoras de código: estudiar mutate lag() y resolver el problema de la suma acumulada. Básicamente el problema del NA.
+
+#Posibles mejoras de código: 
+#estudiar mutate lag() y encontrar una solución más elegante al problema de la suma acumulada. Básicamente el problema del NA al pcipio
 #Un mejor sistema para seleccionar una fila cada 50 (o arbitrario)
-#Pisibles mejoras de funcionalidad: calcular automáticamente el centro del mapa que va a pedir a la API de google. (esto es un problema de GIS)
-#===========================
+#Una importación de mapas mejor que la de google maps.
+#Encontrar un algoritmo para identificar paradas en semáforos. 
+
 
 readGPX("19_feb._2017_10_54_56.gpx")$tracks[[1]][[1]][] %>% #Porque son 3 listas anidadas.
   mutate(
@@ -396,17 +431,22 @@ readGPX("19_feb._2017_10_54_56.gpx")$tracks[[1]][[1]][] %>% #Porque son 3 listas
                            NA)                                          #El resto a NA
                   ) -> ruta 
 
-ggmap(get_map (location=c(-99.16, 19.431), source="google", maptype="terrain", zoom=13)) +
+#Cargamos el mapa desde GoogleMaps. 
+ggmap(get_map (location=c(mean(ruta$lon), mean(ruta$lat)), source="google", maptype="roadmap", zoom=12)) +
   geom_point(data=ruta, aes(x=lon, y=lat), size=.5) +  
   geom_label_repel(data=ruta, aes(x=lon, y=lat, label=etiquetas))
+
+
+#Mala opción, googlemaps no permite especificar el rectángulo, sólo un un centro y el nivel de zoom. stamen y osm sí, pero el servidor de osm funciona mal y stamen está roto para ggmaps (regresa un .png y get_map espera un .jpg).
+
 ```
 
 
-##Funciones mágicas. 
+#Funciones mágicas. 
 
-El paquete mxmaps, de [Diego Valle](https://www.diegovalle.net/mxmaps/index.html), permite hacer mapas coropléticos de México con una sintaxis simplificada. Los mapas que retoman los datos de las bases incluidas no requieren casi ninguna especificación, sin embargo para extender la funcionalidad es necesario conocer el funcionamiento la estructura de la base de datos incluída y agregar las columnas adecuadas. Dado que hay múltiples variables de índice podemos usar un join para agregar capas de datos.
-La sintaxis básica para producir mapas a nivel municipios es `df_mxstate#value <- df_mxstate$variable_de_interés`, donde variable de interés es la que controlará el parámetro de color. Señalamos la variable de interés asignándola en la columna `$value`. Luego llamamos a la función `mxmunincipio_choroppleth(df_mxmunicipio)`, es decir, señalamos el data.frame incluido en la librería en el que previamente señalamos la variable de interés en `$values`. No es necesario especificar los polígonos, están incluidos por defecto. 
-Para mapas a nivel Estados usamos el data.frame `df_mxstate` y `mxstate_choropleth()`. 
+El paquete mxmaps, de [Diego Valle](https://www.diegovalle.net/mxmaps/index.html), permite hacer mapas coropléticos de México con una sintaxis simplificada. Si la cartografía que queremos producir se apoya en datos incluidos en las bases que instala el propio paquete no se requiere casi ninguna especificación, simplemente señalar la columna de interés y luego pasar un segundo comando para generar el mapa. Es perfectamente posible extender la funcionalidad de `mxmaps::` agregando datos a las bases estandar. Para eso es necesario conocer la estructura de las bases de datos incluidas y agregar las columnas adecuadas. Con `str(df_mxstate)` y `str(mx_municipio)` podemos explorar la estructura de la base Estatal y Municipal, las dos unidades territoriales admitidas por este paquete. 
+`df_mxstate` tiene 32 filas de largo, una por cada Entidad Federativa, e incluye la columna `region` con la clave INEGI de entidad, del 01 al 32. `df_mxmunicipio` tiene 2457 filas, una por cada municipio, y en la columna `region` la clave INEGI de 5 dígitos para municipios. Usando estas claves podemos hacer un [join](https://martinpaladino.github.io/Datos_jerarquicos.html#opcion-3.-un-join-de-bases-de-datos.) para agregar datos adicionales desde otras bases con igual unidad de análisis. 
+La sintaxis básica para producir mapas a nivel municipios es `df_mxstate#value <- df_mxstate$variable_de_interés`, donde variable de interés es la que controlará el parámetro de color. Señalamos la variable de interés asignándola en la columna `$value`. Luego llamamos a la función `mxmunincipio_choroppleth(df_mxmunicipio)`, es decir, señalamos el data.frame incluido en la librería en el que previamente señalamos la variable de interés en `$values`. Para mapas a nivel Estados usamos el data.frame `df_mxstate` y `mxstate_choropleth()`. En ninguno de los casos es necesario especificar los polígonos, están incluidos por defecto y esa es la ventaja de `mxmaps`.
 
 
 ```{r, eval=FALSE}
@@ -416,60 +456,65 @@ Para mapas a nivel Estados usamos el data.frame `df_mxstate` y `mxstate_chorople
 if (!require(devtools)) {
     install.packages("devtools")
 }
-devtools::install_github('diegovalle/mxmaps') #En mi compu no instala. :-(
+devtools::install_github('diegovalle/mxmaps')
 ```
 
 ```{r}
 library(mxmaps)
-#A nivel estatal. 
+#Coropléticos a nivel estatal. 
 
-df_mxstate$value <- df_mxstate$pop
-mxstate_choropleth(df_mxstate, title="Población por Estados")
-mxhexbin_choropleth(df_mxstate, title="Población por Estados")  #Los presenta como hexágonos uniformes. 
+df_mxstate$value <- df_mxstate$pop   #Especifico en $value la columna que controlará el color. 
+mxstate_choropleth(df_mxstate)       #Produzco el gráfico. 
+
+#Presentación alternativa: mapa hexagonal. 
+
+mxhexbin_choropleth(df_mxstate)      #Los presenta como hexágonos uniformes. 
 
 #A nivel municipal. 
 
-df_mxmunicipio$value <- df_mxmunicipio$pop_male - df_mxmunicipio$pop_female #Diferencia entre población masculina y femenina. 
-mxmunicipio_choropleth(df_mxmunicipio, title="Diferencia entre población masculina y femina")
+df_mxmunicipio$value <- df_mxmunicipio$pop_male - df_mxmunicipio$pop_female  #Diferencia entre población masculina y femenina. 
+mxmunicipio_choropleth(df_mxmunicipio)
 
-#Agregando datos no incluidos en el paquete.
+#Extender la funcionalidad agregando datos no incluidos en mxmaps.
+#=================================================================
 
-marginacion$region <- marginacion$`<U+FEFF>CVE_MUN`
-df_mxmunicipio <- inner_join(df_mxmunicipio, filter(marginacion, AÑO=="2015"), by="region") #Hago un join por Clave de Municipio y empato ambas bases. Filtro marginacion directamente en la llamada porque la transparencia referencial de R me lo permite. 
-df_mxmunicipio %>% str()    #Le agregué todas las variables del IM. 
 
-df_mxmunicipio$value <- df_mxmunicipio$GM     #GM lo trahe del otro data.frame
-mxmunicipio_choropleth(df_mxmunicipio) +  
-  labs(title="Grado de marginación municipal", 
+#Preparar los datos para unirlos. 
+
+marginacion$region <- marginacion$`<U+FEFF>CVE_MUN` #Retomo el data.frame marginacion, que ya está en mi entorno de trabajo. 
+                                                    #Le agrego una columna llamada region (sin tilde) con la clave municipal.
+                                                    #Así coincide con el nombre de la columma clave de mx_dfmunicipios
+#Unir los datos. 
+
+df_mxmunicipio <- 
+  inner_join(df_mxmunicipio,                        #El documento maestro es df_mxmunicio
+             filter(marginacion, AÑO=="2015"),      #Al que agrego los datos de 2015 de de la base del IM (los filtro directamente aquí)
+             by="region")                           #region es la columna de empate, presente en ambos df.
+
+#Verificar el resultado
+
+df_mxmunicipio %>% str()    #Se agregaron correctamente las variables del IM. 
+
+df_mxmunicipio$value <- df_mxmunicipio$GM     #Ya estoy usando una variable importada del segundo data.frame
+
+mxmunicipio_choropleth(df_mxmunicipio) +      #Llamada usual de mxmunicipio_choropleth
+  labs(title="Grado de marginación municipal", #Agrego sintaxis de ggplot2 para etiquetado
        subtitle="Mapeado con mxmaps",
-       caption="Datos estadísticos CONAPO\nDatos geográficos ¿?") +
-  coord_map("azequalarea") +                 #No tengo idea de lo que estoy haciendo.
-  scale_fill_manual(values=c("red", "orange", "yellow", "red4", "green"))
+       caption="Datos estadísticos CONAPO\nDatos geográficos ¿?\nProyección azimutal de áreas equivalentes.") +
+  coord_map("azequalarea") +                 #Proyección del mapa
+  scale_fill_manual(values=
+                      c("red", "orange", "yellow", "red4", "green")) #Escala discreta de colores.
 ```
 
-#Unas series de tiempo para ir calentando motores...
- 
-```{r, include=FALSE}
-token <- "7bb701f8-91b3-2f96-4bcc-db5aea06d87c"   #Sáquese la suya en http://www3.inegi.org.mx//sistemas/api/indicadores/v1/tokenVerify.aspx 
-```
+#Librerías requeridas. 
 
-```{r}
-library(inegiR)     #Para extraer datos directamente del INEGI a R. 
-library(ggpmisc)
-series_produccion_autos(token) %>%     #Serie de producción de autos. 
-  mutate(mes = format(Fechas, "%m"), anio = format(Fechas, "%Y")) %>% 
-  group_by(anio) %>% 
-  summarise(anual=sum(Autos)) %>% 
-  ggplot(aes(x=anio, y=anual, group=1)) +  
-  geom_line() + 
-  labs(title="Producción anual de automóviles en México", subtile="Extracción de datos directa del INEGI", datos="INEGI") +  theme_minimal()
-
-
-series_produccion_autos(token) %>% 
-  ggplot(aes(x=as.POSIXct(Fechas), y=Autos, group=1)) +  
-  geom_line() + 
-    stat_peaks(geom = "text", size=3, angle = 90,hjust = -0.1, x.label.fmt = "%b%y",  ignore_threshold = 0.4, strict = T) + stat_valleys(geom = "text", size=3, angle = 90,hjust = 1.5, x.label.fmt = "%b%y",  ignore_threshold = 0.4, strict = T) + stat_smooth() + 
-  theme_minimal() + labs(title="Producción mensual de automóviles en México", 
-                         subtile="Ajuste por regresión local. Picos y valles.", 
-                         datos="INEGI")  
+```{r librerias, eval=FALSE}
+library(rgdal)     #Para importar shapefiles. 
+library(knitr)     #Para formatear tablas
+library(mapproj)   #Para cambiar las proyecciones. 
+library(ggrepel)   #Para controlar etiquetado.
+library(ggmap)     #Para importar rasters y producir mapas. 
+library(plotKML)   #Levanta muchísimas dependencias en la instalación.
+library(mxmaps)    #devtools::install_github('diegovalle/mxmaps')
+library(tidyverse)
 ```
