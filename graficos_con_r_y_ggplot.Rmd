@@ -156,7 +156,7 @@ kable(diccionario, caption= "Nombres cortos y largo de las variables")
 - Algunas variables no fueron relevadas o calculadas en algunos años de la elaboración del índice. 
 - Sin embargo no hay casos perdidos al azar, sólo esos missing sistemáticos por cambios de metodología. 
 
-```{r tableplot, fig.height=10, fig.width=10, echo=FALSE, message=FALSE, warning=FALSE, eval=F}
+```{r tableplot, fig.height=10, fig.width=10, echo=FALSE, message=FALSE, warning=FALSE}
 missmap(base_marginacion)
 ```
 
