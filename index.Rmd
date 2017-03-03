@@ -24,7 +24,11 @@ Mis caprichos:
 
 #Guías de  R.
 
->Soon to be populated. 
+##[Gráficos con R y ggplot](https://martinpaladino.github.io/graficos_con_r_y_ggplot.html)
+
+-Desde la gramática de los gráficos hasta gráficos multivaridos. 
+
+##[Manipulación de datos con dplyr]()
 
 #Ejercicios. 
 
