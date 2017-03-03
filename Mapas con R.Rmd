@@ -271,14 +271,6 @@ ggplot(mediaIM, aes(map_id = id)) +
     geom_map(aes(fill = mediaIM), 
              map = estados_df) + 
     expand_limits(x = estados_df$long, y = estados_df$lat) + 
-  coord_map ("gilbert") + 
-  theme_void() + 
-  labs(title="Proyeccción Gilbert")
-
-ggplot(mediaIM, aes(map_id = id)) +   
-    geom_map(aes(fill = mediaIM), 
-             map = estados_df) + 
-    expand_limits(x = estados_df$long, y = estados_df$lat) + 
   coord_map ("lagrange") + 
   theme_void() + 
   labs(title="Proyeccción Lagrange")
