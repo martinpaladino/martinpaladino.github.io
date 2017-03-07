@@ -29,36 +29,36 @@ Mis caprichos:
 **BORRADOR**
 
 - Conceptos de la programación funcional aplicables a la investigación reproducible. 
-  - Inmutabilidad de los datos. 
-  - Transparencia referencial. 
-  - Funciones puras. 
+    - Inmutabilidad de los datos. 
+    - Transparencia referencial. 
+    - Funciones puras. 
 
 ##[Manipulación de datos con dplyr](httpss://martinpaladino.github.io/manipulacion_de_datos_con_r_dplyr_y_tidyr.html)
 
 Resumida en cuatro operaciones:
 
 - Extraer subconjuntos de datos. 
-  - Selección de columnas. 
-  - Filtrado de filas.  
+    - Selección de columnas. 
+    - Filtrado de filas.  
 - Transformarlos. 
-  - Recodificaciónd de variables categóricas. 
-  - Operaciones aritméticas sobre variables numéricas.
+    - Recodificaciónd de variables categóricas. 
+    - Operaciones aritméticas sobre variables numéricas.
 - Obtener sumarios. 
-  - Para el conjunto de los datos.
-  - Por grupos.  
+    - Para el conjunto de los datos.
+    - Por grupos.  
 -Unir múltiples bases de datos. 
 
 ##[Gráficos con R y ggplot](https://martinpaladino.github.io/graficos_con_r_y_ggplot.html)
 
 - Desde la gramática de los gráficos hasta gráficos multivaridos. 
-  - Definición concetual de gráficos y sus elementos. 
+    - Definición concetual de gráficos y sus elementos. 
 - Gráficos básicos por tipos: columnas, línea, dispersión.
 - Gráficos multivariados.
-  - Con claves de color o símbolos.
-  - Multipanel.
+    - Con claves de color o símbolos.
+    - Multipanel.
 - Control del aspecto estético de los gráficos. 
-  - Con estilos visuales predefinidos. 
-  - Personalizado. 
+    - Con estilos visuales predefinidos. 
+    - Personalizado. 
 - Gráficos exploratorios con sintaxis simplificada. 
   
 
@@ -81,12 +81,18 @@ Le viene incluyendo todo lo que es...
 
 ##[Cartografía con R. (beta)](https://martinpaladino.github.io/Mapas_con_R.html)
 
-Pruebas de cartografía en R. 
+Cartografía digital en R. 
 
 Le viene incluyendo todo lo que es...
 
+- Sistemas de coordenadas. 
+    - Incluyendo el sistema de coordenadas estándar del INEGI.
 - Importación de shapefiles. 
-    - Incluyendo un problema sin solución --aún-- con los shapefiles del INEGI. 
+    - Objetos SPDF.
+- Importanción de rutas desde un teléfono celular.
+
 - Mapas coropléticos con ggplot(). 
     - Con geom_map()
     - Y geom_polygon()
+- Mapas coropléticos de México con mxmaps. 
+- Importación de capas raster desde GoogleMaps, Stamen y OpenStreetMap
