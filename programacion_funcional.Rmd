@@ -1,0 +1,206 @@
+---
+title: "programacion_funcional"
+author: "Martín Paladino"
+date: "6 de marzo de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Filosofía: programación funcional con inmutabilidad de datos, transparencia referencial y funciones puras. 
+
+R permite manipular datos de una forma sólo limitada por nuestra propia capacidad. Al no imponer límite a las transformaciones podemos hacerlo todo, incluidas formas de corromper o deformar nuestros datos que nunca hubieramos imaginado. Dado que R no nos limita ni nos induce a determinadas prácticas de programación es necesario que desarrollemos un conjunto de prácticas que eviten siempre que sea posible la corrupción de los datos y reduzcan la carga cognitiva del programador/analista reduciendo el número de objetos en el entornos. 
+Las líneas siguientes no son un manual de procedimientos sino un breve y simplificado excurso sobre teoría  de los lenguajes de programación y la forma en que podemos aprovecharla para crear prácticas y flujos de trabajo al mismo tiempo predecibles y flexibles que producen un código fácil de mantener. Con programas cortos y simples sobre los que estamos trabajando activamente el mantenimiento del código no es problemático: podemos recordar que hace cada línea y tener un registro mental de los nombres que vamos asignando a las estructuras de datos. Sabemos, por ejemplo, que `datos` son los datos originales, `datos2` una copia en la que recodificamos de cierto modo un variable y `datos` *después de la línea 25* incorporó esa recodificación. Sin embargo cuando el código crece en tamaño y complejidad y/o volvemos a trabajar sobre ese código después de un tiempo y ya no tenemos memorizadas las mutaciones a las que fuimos sometiendo a los datos a lo largo del programa estaremos ante un código dificil de mantener. Hacer una pequeña modificación -digamos, incorporar las observaciones de un dictamen- implicará varias horas de estudio de nuestro propio código hasta familiarizarnos nuevamente con la serie de transformaciones y estar en condiciones de hacer los cambios sin romper la sintaxis. La programación funcional es un paradigma de programación que elimina de raíz estos escenarios y está implementada en R desde sus orígenes.
+
+R es un lenguaje multiparadigma, es decir, admite varias formas de obtener los mismos resultados. Pertinentes a este apartado son los paradigmas procedimentales y funcionales, ambos disponibles en R. Podemos combinarlos y de hecho en ocasiones no tendremos más alternativa que hacerlo, pero para evitar confusiones es mejor utilizar sólo uno de ellos y por lo ya dicho es todavía mejor utilizar solamente el paradigma funcional. 
+Los conceptos clave del paradigma funcional que aplicaremos son la inmutabilidadd de los datos, las funciones puras y la transparencia referencial. 
+La inmutabilidad de los datos prescribe que nunca modificaremos el estado de los datos. Esto no implica que no podemos transformar datos --al fin y al cabo el tema que estamos tratando--, simplemente que nunca reflejaremos una transformación de los datos en la estructura de datos original. En términos prácticos si necesitamos datos transformados generaremos una nueva estructura ad hoc con esa transformación, pero los datos originales permanecen identicos. Esto garantiza la integridad de los datos y hace virtualmente imposible que se corrompan o cambien permanentemente de estructura haciendose predecibles. La forma de hacerlo es transformando los datos con una función, lo que nos lleva al siguiente punto.
+Las funciones puras son aquellas que reciben un input y nos regresan un output y no producen efectos colaterales. Un efecto colateral es un efecto de la función que produce un cambio de estado del programa fuera del ámbito estricto esa función.^[Evidentemente no consideramos al output de la función como un efecto colateral.] Dado que no queremos cambiar estados más allá del imput-output de la función y que frecuentemente el resultado final esperado implica más de una función sería una buena idea poder encadenar funciones, de modo que el output de una sea el imput de la siguiente. Para esto nos ayuda la transparencia referencial, el último punto que tocaremos. 
+La transparencia referencial es una propiedad de los lenguajes de programación que hace mutuamente reeemplazables en la sintaxis a expresiones equivalentes. Dado que `1/2 = 0.5` en R podemos usar uno u otro indistintamente. Si nos interesa trabajar sobre variable transformada esto significa que en lugar de crear primero esa variable transformada, guardarla en algún lugar y pasarla posteriormente a otra función llamar directamente a la función de tranformación en lugar mismo en el que lo necesitamos. La transparencia referencial se encarga hacer la transformación en el momento adecuado. Inclusive nos permite hacer subconjutos sobre el output de una función  directamente en la llamada a la función. Así `rnorm(15, 0, 1)[3]` nos regresará el tercer valor del vector de número normales aleatorios que hemos creado, no es necesario asignar un nombre al vector y luego extraer el valor. 
+Veamos algunas pruebas de estos conceptos en R aplicándolos a la estimación de una mediana y algunos problemas de de unión y separación de datos. La mediana es el valor que se ubica en el centro de un vector ordenado. Para obtenerla debemos primero ordenar al vector, luego ubicar la posición que divide al vector en 2 partes iguales y finalmente ver cuál es el valor que ocupa esa posición, es decir, $M_e=x_{(n+1)/2}$. 
+
+```{r bloque1}
+
+#Bloque 1 
+
+#Captura de datos.
+
+x <- c(100000, 1, 2, 3, 4, 5, 6, 100, 1000) #Creo el vector "x" con valores numéricos. Se mantendrá inmutable a lo largo de todo el ejercicio. 
+y <- c("a", "b", "c", "d", "e", "f", "g", "h", "i") #El vector y tiene valores caracter. 
+
+#Inmutabilidad de los datos
+#==========================
+#Realizo una serie de operaciones sobre x y y, pero estos permanecen iguales. 
+
+x                       #Imprimo x
+
+data.frame(y=y, x=x)    #Combino x y y en una estructura rectangular
+
+x*x                     #x al cuadrado
+
+median(x)               #x mediana de x
+
+x                       #x nunca se modificó
+
+#Funciones puras. Estimación de una mediana para vectores de largo impar.
+#========================================================================
+
+
+#Sin efectos colaterales, solo recibe x y regresa la mediana.. 
+
+sort(x)[(length(x)+1)/2]           
+
+x                          #x se mantiene igual.
+
+#Con efectos colaterales.  
+
+n <- length(x)
+x <- sort(x)
+posicion <- (n+1)/2        
+x [posicion]               #Regresa la mediana. 
+
+x                          #Efecto colateral: reordenó x. 
+n;posicion                 #También agregó dos objetos al entorno que no volveremos a utilizar.
+data.frame(y=y, x=x)       #Corrupción de datos: no coinciden las filas. 
+
+#Transparencia refencial. 
+#========================
+
+median(x) == sort(x)[(length(x)+1)/2]     #Igualdad de dos expresiones. 
+
+z <- sort(x, decreasing=TRUE)            #Reordeno x de mayor a menor, lo asingo a z.
+
+z
+
+z[1]                                      #z en la posición 1
+
+sort(x, decreasing = TRUE)[1]             #Podemos usar las expresiones z[1] y sort(x, decreasing = TRUE)[1] de manera totalmente equivalente. Ambas son la misma referencia para R. 
+
+data.frame(y=y, x=log(x))
+
+data.frame(y=y, x=x, z=log(x))
+
+z                                          #z no se modificó, z=log(x) sólo es válido dentro de la función. 
+
+#Función para estimar la mediana en vectores pares impares.
+
+ifelse(length(x)%%2 == 0,                                                       #%%Regresa el resto de la división, si es igual a 0 length(x) es par.
+      (sort(x)[floor((length(x)+1)/2)] + sort(x)[ceiling((length(x)+1)/2)])/2,  #length(x) par, promedio de los valores centrales. 
+      sort(x)[(length(x)+1)/2]                                                  #length(x) par: valor central. 
+      )
+```
+
+Como vemos en el Bloque 1 R se maneja tanto dentro de un paradigma procedimental --en el que modificamos estado del programa o de los datos línea por línea- como dentro de un paradigma funcional, en el que nunca modificamos el estado del programa o la estructura de los datos de modo que afecte al código siguiente. Cuando modificamos los datos lo hacemos *dentro* de funciones. De este modo x será siempre x, a lo largo de todo el programa, con los mismos datos en el mismo orden. Así se reduce notablemente la carga cognitiva del programador/analista, no es necesario verificar en cada paso que los datos no han perdido su integridad. R se encarga de administrar los nombres de los objetos, por lo tanto no son necesarias una convención y disciplina estrictas para nombrar objetos. También  evitamos completamente llevar a cabo prácticas riesgosas como el reciclado de nombres.^[Reciclamos nombres cuando en una misma sintaxis utilizamos el mismo nombre para objetos no identicos. Por ejemplo, el objeto `datos` al comienzo tiene determinada información y estructura, en un punto del programa por una necesidad puntual lo modificamos -digamos, recodificamos algunas de las variables- y mantenemos el nombre `datos`. Aquí hay dos problemas posibles: 1) Que necesitemos nuevamente los datos originales y debamos modificar una vez más `datos` para regresarlo a su forma original o, peor aún, que la recodificación falle por algún error pero R no detenga la ejecución, ya que la línea de código que invoca a `datos` recibirá un objeto con ese nombre, aunque con la información incorrecta. A esto nos referimos con *errores silenciosos*.]  
+
+```{r, eval=T}
+#Mejorar el diagrama: tres paneles, funcional, reciclador y nominador estricto.
+
+library(DiagrammeR)
+DiagrammeR("graph TB
+subgraph Paradigma imperativo
+A((Datos)) --> B[Rutina de recodificación]
+B--Datos<br>recodificados-->C((Datos<br>recodificados))
+C-->D[Análisis 1]
+C-->E[Rutina de recodificación 2]
+E--Efecto colateral-->N((Datos<br>recodificados))
+N--Recibe datos diferentes-->F
+C-.Espera datos originales.->F[Análisis 3 <br> Espera datos originales]
+N-->O[Análisis 2]
+end
+subgraph Programación funcional
+G((Datos))-->H[Función de recodificación 1] 
+H-->I[Análisis 1]
+G-->J[Función de recodificación 2]
+J-->K[Análisis 2]
+G-->L[Función de recodificación 1]
+L-->M[Análisis 3]
+end
+subgraph Leyenda
+Z((Objeto <br>asignado))
+Y[Proceso]
+end
+"
+)
+```
+
+###CODA:
+
+**Use el asignador `<-` cuando sea estrictamente indispensable.**
+- Su uso se justifica solamente cuando hay una penalización  de desempeño muy alta. 
+  - Como regla general, sólo asigne nombre a objetos cuya producción requiere demasiado tiempo. 
+  - Importar datos leyéndolos de un archivo suele ser un proceso lento, hágalo sólo una vez al principio del programa y asigne un nombre al objeto resultante. 
+  - Lo mismo vale para alguna transformación basada en un algortimo complejo y que utilizará recurrentemente. 
+    - Por ejemplo, los modelos con efectos aleatórios para n grande son complejos de resolver y analizaremos en profundidad el resultado. En este caso un nombre al resultado en lugar de llamar a la función que produce el modelo una y otra vez. 
+    - Las recodificaciones, partición de datos y unión de bases son muy rápidas en R y propensas a generar errores en el código que les sigue. Nunca asigne nombre en estos casos, llame directamente a la función pertinente.   
+- Por su paz mental nunca recible nombres: un objeto distinto requiere un nombre distinto. Nunca debería crear líneas del tipo `datos <- datos[algo]`, `datos_algo <- datos[algo]` es una mejor alternativa.  
+  - Si aún así prefiere asignar nombres a los datos transformados use una convención clara y sea estricto al respecto. El data.frame en el que  recodificó la variable V3 deberían llamarse `datos_recodificados_V3_dicotomica` o algo por el estilo. Nunca `datos2`, `datos_reco` u otros nombres que no le dan información sobre lo que contienen. Cuando lo escriba recordará perfectamente que hay ahí, en unos meses no. Si preferiría no tener que tiepar nombres tan largos puede usar programación funcional y simplemente no tendrá que tipear ningún nombre. 
+  
+**Use funciones siempre que sea posible.** 
+- En lugar de generar múltiples copias de un objeto a medida que lo transforma, genere múltiples funciones que hacen esas transformaciones sin efectos colaterales y llámelas cada vez que necesita los datos transformados.
+- Asegúrese de que las funciones que utiliza, incluyendo las que usted crea, sea puras. Sólo imput y output. 
+  - R permite funciones lambda, es decir, funciones anónimas. Úselas para funciones ad hoc que no volverá a utilizar.
+- Si nota que está copiando y pengando código con frecuencia considere convertir ese código en una función. De este modo evitará posible errores en el copiado/pegado.
+    - De ese modo si quiere hacer algún cambio a la sintaxis lo hará directamente en la función, produciendo efectos sobre todo el código que llama a esa función. No será necesario repetir el cambio en cada aparición de ese código. 
+- En la programación funcional los paréntesis reemplazan al salto de línea para organizar el orden de ejecución del programa. Esto que puede dificultar la lectura del código.  
+  - Utilice tuberías para encadenar funciones. Tendrá un código mucho más legible.  
+  - Utilice sangrías para hacer más legible su código: cada función y/o sus argumentos deberían estar en línea aparte. 
+  - El único efecto colateral de la programación funcional es que tendrá que contar paréntesis. Si se toma el trabajo adicional de alinearlos será más fácil ubicar cuál abre y cual cierra cada función. 
+- Al finalizar su análisis su entorno de trabajo debería tener sólamente la o las fuentes de datos originales y las funciones con las que las transforma, nunca 15 o 20 versiones levemente diferentes y con nombres parecidos de los mismos datos. 
+
+
+#Redacción anterior. 
+
+La aproximación de `dplyr::`^[Siempre que se lea una expresión en letra monoespaciada seguida de dos veces dos puntos estaremos haciendo referencia a una librería.] tiene ventajas demasiado grandes para pasarlas por alto. Combinado con `margittr::`, una librería que extiende las capacidades de R y permite utilizar tuberías para enlazar funciones `dplyr::` convierte a R en un lenguaje moderno que produce código elegante, legible y fácil de mantener. Esto nos permitirá enfocarnos en lo que nos interesa, el análisis de datos. Cada minuto que nos ahorremos dando mantenimiento a nuestro código o arreglando una estructura de datos que se corrompió es un minuto más analizando datos. 
+La mayor de estas ventajas, sin duda, es que nos permite sacar provecho de uno de los paradigmas más importantes del lenguaje R: la programación funcional y la consiguiente inmutabilidad de los datos. Si usamos dplyr apropiadamente asignaremos nombre a los datos sólo una vez, al inicio del análisis. Todas las transformaciones necesarias para cierta operación (limpieza, recodificación, etc.) se llevan a cabo dentro de una cadena de funciones claramente legible que nunca cambiara los datos originales. Esto garantiza la integridad de los datos y por consiguiente de los resultados. Los errores que cometamos -y lo haremos- serán errores explícitos y ruidosos, que se manifestarán en el punto en el que ocurren, no al final del proceso. Esto nos ahorrará el tiempo que pasaríamos rastreando y corriegiendo errores que se propagan por todo el código cuando realizamos un cambio en los datos en un punto que tiene efectos colaterales sobre el código que sigue. Así, por ejemplo, cambiamos un nombre de columna para que se imprima en un gráfico e inadvertidamente rompemos el código que sigue, ya que este esperaba el nombre original. Si, para evitar este problema, multiplicamos los nombres que asignamos a los datos, nos obligamos a rastrear decenas de objetos con nombres y estructuras muy parecidos, tratando de adivinar cuál es la correcta para cada caso. Es perfectametne posible trabajar de este modo y sin duda es una aproximación más directa. Pero el ahorro de tiempo inicial se desvanecerá cuando haya un problema. Una hora rastreando el lugar del código más arriba que rompe el código más abajo es una hora menos que dedicamos al análisis de datos. Si el código es suficientemente complejo nuestros "arreglos" seguramente romperán otra parte del código y así hasta la frustración.^[Esto es aún peor cuando queremos realizar una actualización o mantenimiento del código tiempo después de haberlo escrito. ¿Qué era datos2? ¿Por qué no hay recodificaciones en datos_reco?] La programación funcional elimina de raíz los efectos colaterales. 
+La sintaxis tradicional de R permite ajustarnos al paradigma de programación funcional anidando funciones entre paréntesis. Esto es un avance con respecto asignar nombre al resultado de cada función, pero el código que produce es difícil del leer, el resultado está primero, los procesos se organizan en el orden inverso al que se ejecutan. Si esto fuera poco nos obliga a rastrear y contar los  paréntesis que organizan el código. Las tuberías que utiliza `dplyr::` producen, en cambio, un código legible y por tanto fácil de mantener. Véa el siguiente ejemplo, en el que hacemos pizza con tres paradigmas de programación: 
+
+###Pizzería "El asignador". Pizzas de hoy y de ayer.
+
+```{r eval=F}
+#Pizzería "El asignador"
+ingredientes_masa <- c(harina, agua, levadura)
+ingredientes_salsa <- c(ajo, tomate, cebolla)
+salsa <- cocinar(ingredientes_salsa)
+masa <- amasar(ingredientes_masas)
+masa_estirada <- estirar(masa)
+prepizza <- salsear (masa_estirada, salsa)
+pizza <- hornear (prepizza)
+```
+
+###Pizzería La funcional clásica.
+
+```{r eval=F}
+#Pizzero La funcional
+pizza(
+  hornear(
+    salsear(c(ajo, tomate, cebolla),
+            estirar(
+              amasar(c(harina, agua, levadura)
+                    )
+                   ) 
+           ) 
+         ) 
+     )
+     
+```
+
+### Pizzería magrittr ¡La más %>% del rumbo!
+
+```{r eval=F} 
+#Pizzería magrittr, de René Magritte e hijos. 
+c(harina, agua, levadura) %>% 
+  amasar %>% 
+  estirar %>% 
+  salsear (c(ajo, tomate, cebolla) %>%
+  hornear
+```
+
+El sabor es el mismo y si todo marcha bien jamás notaremos la diferencia. 
+
+Sin embargo el proceso es diferente. Si la pizza del asignador tiene problemas el pizzero deberá rastrear siete objetos para identificar en cuál está el problema. Quizás le quedó `masa_estirada` del día de ayer^[Esto es un muy frecuente: si repetimos los nombres de los objetos estos quedarán en nuestro entorno, cargados de datos. Luego, digamos, ajustamos un modelo sobre los datos con ese nombre a los que recodificamos para el caso. Si esta recoficación fallara por un error de sintaxis el modelo se ejecutará igual -pues sigue encontrando un objeto con ese nombre. Esto esproduce un error silencioso, que no advertiremos hasta el resultado final, si es que lo advertimos.], entonces no está seguro si la pizza que sale del horno tiene `masa_estirada` fresca o una que quedó de ayer.  
+
+El pizzero funcional ni siquiera le da un nombre al objeto que está manipulando, sólo le interesa el proceso. Simplemente le pasa el resultado de ese proceso al cliente (¡otra función!) cuando este la requiere. Hace pizza cada vez que le piden, no tiene un inventario al que estar rastreando. Pero si no lee la receta con cuidado podría poner primero la salsa y después la masa, ya que la receta comienza con el resultado y no con las materias primas. Y no digamos nada del trabajo que le daría cambiar su receta para agregar queso a la pizza o ponerle salsa hasta las orillas a pedido de un cliente. A contar paréntesis y ubicar la línea exácta en la que pasar un argumento adicional a una función.  
+
+En Pizzería mgrittr empezamos por los ingredientes y terminamos con el horneado. Si queremos agregar un ingrediente o modificar un proceso simplemente lo ubicamos en el lugar obvio. El queso va después de salsear y antes de hornear. `cubrir_borde` es un argumento que pasamos a la función salsear, que identificamos inmediatamente en el código. La receta es legible de una forma intuitiva, comienza por las materias primas y termina en el horneado. Es fácil identificar cada paso y modificarlo de acuerdo a las necesidades del momento. 
