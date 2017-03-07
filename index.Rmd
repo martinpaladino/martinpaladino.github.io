@@ -33,7 +33,7 @@ Mis caprichos:
     - Transparencia referencial. 
     - Funciones puras. 
 
-##[Manipulación de datos con dplyr](httpss://martinpaladino.github.io/manipulacion_de_datos_con_r_dplyr_y_tidyr.html)
+##[Manipulación de datos con dplyr](https://martinpaladino.github.io/manipulacion_de_datos_con_r_dplyr_y_tidyr.html)
 
 Resumida en cuatro operaciones:
 
