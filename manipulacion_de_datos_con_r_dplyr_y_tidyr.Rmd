@@ -1,8 +1,8 @@
 ---
 title: "Guía práctica de manipulación de datos"
-subtitle: "con dplyr, tidyr y tibble"
+subtitle: "con dplyr, tidyr y maggritr"
 author: "Martín Paladino^[mpaladino@mora.edu.mx]"
-date: "Versión 0.3"
+date: "Versión 0.9"
 lang: es-ES
 output: 
   html_document: 
@@ -35,7 +35,7 @@ En apretada síntesis la manipulación de datos se resume en cuatro operaciones:
 
 Este documento se basea en un paradigma de trabajo --la programación funcional basada en la inmutabilidad de los datos y la transparencia referencial--, un conjunto de herramientas disponibles en R --reunidas en las librerías `tidyr::` y `dplyr::` entre otras-- y un formato preferido para datos --tidy data-- compatible con ese paradigma y herramientas. Con estos tres pilares podermos llevar a cabo las operaciones resumidas previamente.  
 
-#Manipulación de datos con dplyr:: y magrittr::
+##Manipulación de datos con dplyr:: y magrittr::
 
 Las tareas de operaciones de manipulación de datos que hemos mencionado pueden llevarse a cabo de distintas maneras. La librería `base::` de R contiene operadores y funciones para hacerlo, por ejemplo `[,]` para extraer subconjuntos, `subset()` para operaciones agrupadas, `merge()`, `cbind()` o `rbind()` para combinar múltiples fuentes de datos. A pesar de ser funciones sumamente flexibles y aplicables a múltiples estructuras de datos no son las más convenientes. Están pensadas para usarlas en en un paradigma procedimental, más que con uno funcional, además generan un código dificil de leer y nos obligan a repetir los nombres de las estructuras de datos en cada llamada. 
 La librería `dplyr::` ofrece un conjunto unificado de herramientas de manipulación de datos que induce a la programación funcional, produce código legible cuya comprensión es intuitiva y, al estar implementada en lenguaje C, ofrece tiempos de ejecución muy cortos. 
@@ -44,8 +44,8 @@ Las capacidades de `dplyr::` están ampliadas por algunas librerías cómplices.
 `dplyr::` importa el operador `%>%` de  `magrittr::`, así que lo tendremos siempre disponible. Si queremos usar los restantes operadores deberemos cargar la librería.^[Los restantes operadores son `%T>%`, que hace una bifurcación y para dar output a un paso intermedio y ` %$>%`, que regresa el output como un conjunto de vectores en lugar de un data.frame.]   
 Otra librería hermana de `dplyr::` es `tidyr::`, que incluye funciones para corregir algunos errores frecuentes en bases de datos y cambiarles la estrctura. `tidyr::` además introduce el concepto *datos prolijos* o *tidy data*, una manera consistente de organizar la información contenida en estructura de la clase `data.frame` que facilita su manipulación. Ya veremos de qué se trata y por qué son importantes. Dado que `dplyr::` funciona mejor con datos que tienen cierto formato el primer paso será identificar cuál es ese formato de datos. 
 
-
-###¿Sumarios de datos o base de datos?  
+#La estructura de los datos.
+##¿Sumarios de datos o base de datos?  
 
 Con frecuencia los datos que encotramos en internet no son bases de datos en sentido estricto, sino sumarios o informes que condensan información. Una tabla en la que se registran cada una de las ventas de una frutería, con montos, cantidades, fecha y hora de la transacción, es una base de datos en bruto. Una tabla que resume las ventas mensuales es un sumario. Es muy probable que ese sumario se haya originado en una base de datos, pero esta o no es de acceso público o debemos seguir buscando para encontrarla. 
 Siempre que resulte posible trabajaremos con bases de datos tan desagregadas como nos resulte posible conseguir, ya que tienen mayor cantidad de información. Si es necesario un sumario podemos realizarlo, pero no a la inversa. Es decir, a partir de una base de datos podemos crear los sumarios, pero desde los sumarios no podemos recrear la base de datos.  
@@ -73,7 +73,7 @@ tribble(~Mes,      ~Ventas,
 
 En R y con `dplyr::` podemos manejar información en versión sumario, cosa que haremos cuando no podemos acceder a los datos crudos. Sin embargo como `dplyr::` funciona solamente con data.frames es necesario que esos datos tengan una estructura rectangular.  
 
-###Datos rectangulares. 
+##Datos rectangulares. 
 COn `dplyr::` podemos manipular datos provenientes importados desde casi cualquier formato de archivo, pero si como trabajamos con la estructura data.frame es necesario que cumplan una condición: los datos deben ser rectangulares. Por **rectangulares** se entiende que están organizados en filas y columnas contíguas y que cada filas tiene el mismo largo que las demás, así como todas las columnas.^[Esto no significa que deba tener el mismo número de filas que de columnas, esos serían datos cuadrados, un caso especial de los datos rectangulares.] Cuando la intersección de una fila y una columna no tiene un dato válido debe codificarse como `NA`, not available o información perdida.
 
 Es frecuente que cuando descargamos datos capturados o procesados con Excel los datos no sean rectangulares. Es un práctica tan mala como ampliamente difundida entre los usuarios de Excel usar la misma hoja para alojar los datos y el procesamiento de datos.^[R impide intrínsecamente llevar a caso semejante mala práctica.] o aprovechar la flexibilidad de esa aplicación para poner datos que corresponden a diferentes temáticas o indicadores en la misma columna. El proceso de importar esos datos mal formateados a R es penoso. 
@@ -249,7 +249,7 @@ tribble(
   rename(Tipo=Col1,              
          Fruta=Col2,             
          Precio=Col3) %>% 
-  filter(Col2=="Cítrico")        #filter() regresa un error: Col2 no existe. ¿Por qué? Porque la renombramos el paso anterior 
+  filter(Col2=="Cítrico")        #filter() regresa un error: Col2 no existe. ¿Por qué? Porque la renombramos en el paso anterior 
 
 #Filtrar filas
 #=============
@@ -298,7 +298,7 @@ tribble(
   rename(Tipo=Col1,              
          Fruta=Col2,             
          Precio=Col3) %>% 
-  filter(Precio>=12)    #Usando >= conservo solamente las filas en las que el precio es mayor a igual a 12. <, >, y <= también son válidos. zs
+  filter(Precio>=12)    #Usando >= conservo solamente las filas en las que el precio es mayor a igual a 12. <, >, y <= también son válidos.
 
 #Seleccionar columnas
 #====================
@@ -383,9 +383,9 @@ frutería2 <- tribble(
                              )
 ```
 
-##Uso avanzado de `dplyr::`
+#Uso avanzado de `dplyr::`
 
-###Alternar entre formato largo y ancho. 
+##Alternar entre formato largo y ancho. 
 
 El formato de datos largo es el que llamamos prolijo. Sin embargo en ocasiones  puede ser necesario hacer el proceso inverso y pasar datos de formato largo a formato ancho. Por ejemplo, para hacer operaciones matemáticas entre columnas. Siempre es mejor partir del formato largo y prolijo y pasar a formato ancho allí donde es necesario. 
 La función `spread()` hace este cambio. 
@@ -403,7 +403,7 @@ desprolijo %>%
   mutate(variación_precio=`2016`-`2015`) #Puedo hacer el cálculo. 
 ``` 
 
-###Seleccionar las columnas que cumplen determinada condición. 
+##Seleccionar las columnas que cumplen determinada condición. 
 
 Hasta ahora hemos visto como seleccionar columnas escribiendo sus nombres separados por comas o usando `-` para señalar cuales no queremos que permanezcan. `select()` tiene algunas funciones ayudantes que permiten seleccionar columnas de acuerdo con alguna condición lógica y pueden ser de gran ayuda cuando trabajamos con bases de datos con gran número de columna.  
 
@@ -419,10 +419,27 @@ select(fruteria_verdulería, 2:4)                          #Selecciona las colum
 
 ##Filtrar por más de una condición o dentro de un conjunto. 
 
-`filter()` utiliza todos los operadores lógicos de R, incluidos `&`, `|` e `%in$`. `&` es y y lo usamos para unir dos condiciones que deben cumplirse para que una fila sea conservada. `|` es o, lo usamos cuando pueden cumplirse una condición *o* la otra. %in% en operaciones de conjuntos equivale a pertenece. Busca igualdad, del mismo modo que `==`, sólo que lo hace con respecto a un conjunto --en R típicamente será un vector-- y no a una cadena. Un operador que no pertenece a `dplyr::` o `base::`pero que también puede ser de gran utilidad es `%like%`, que importamos del paquete `data.table::`. `like::` permite especificar igualdades parciales.   
+Filter es una herramienta muy potente para hacer subconjuntos de datos. Para sacar el mayor provecho vale la pena reflexionar sobre la forma en que opera y la sintaxis de la función nos da una pista. Entre los paréntesis posteriores a filter ubicamos una condición lógica que especificamos a través de operadores binarios. Los operadores binarios más conocidos son los que usamos frecuentemente para definir operaciones aritméticas: `+` para sumar o `-` para restar. Se los llama binarios porque se ubican entre dos expresiones y establecen una relación entre ellas, de lo contrario sería operadores unarios, otra clase también definida por R. Consiguientemente si no ubicamos al operador binario entre dos expresiones R nos regresará un error. A las dos expresiones que envuelven a un operador binario las llamados *lado derecho* y *lado izquierdo*. Esto es de la mayor importancia, ya que la ubicación en cada uno de los lados hace que la operación sea diferente. La aritmética nos ayuda una vez más a comprenderlo, si queremos hacer una resta entre los números 10 y 2 no obtenemos el mismo resultado alternando el lado en que los ubicamos. `10-2` no es lo mismo que `2-10`. `a %in% x`, que se lee en voz alta como 'a pertenece a x' no es lo mismo que 'x pertenece a a'. Filter utiliza todos los operadores binarios de R, que se detallan en tabla a continuación. Con esta especificación R evalúa el cumplimiento de una condición y regresa `TRUE` cuando se cumple y `FALSE` cuando no. Dado que R opera por defecto de manera vectorizada, cuando especificamos un vector evalúa todo el vector y regresa un vector de `TRUE`y `FALSE` del mismo largo del que introduducimos. Posteriormente filter() conseva solamente aquellas filas en las que el resultado de la evaluación fue `TRUE`. Esta evaluación aplica tanto para cadenas de caracteres como para datos del tipo numérico. En el caso de las cadenas de caracteres algunos operadores utilizarán el orden alfabético, así `"pera">"manzana"` regresa `TRUE`, porque `p` ocupa el lugar 16 en el alfabeto y `m` el 13. En caso de empate R evaluará la segunda letra y así hasta desempatar.  
+Table: Operadores binarios de R disponibles para `filter()`
+
+Operador  | Uso                  |Aplicación usual
+----------|-----------------------------------------
+`==`      | Igual que            |Caracteres o numéricas
+`>`       | Mayor que            |Numéricas, caracteres por orden alfabético
+`>=`      | Mayor o igual que    |Numéricas, caracteres por orden alfabético
+`<`       | Menor que            |Numéricas, caracteres por orden alfabético
+`<=`      | Menor o igual que    |Numéricas, caracteres por orden alfabético
+`%in%     | Pertenece a un vector|Vectores numéricos o de caracteres
+`&`       | Y lógica, para especificar una segunda condición a cumplirse | Entre dos expresiones binarias
+`|`       | Ó lógica, para especificar una condición alternativa | Entre dos expresiones binarias
+`!`       | No, invierte el sentido de cada operador, regresa TRUE cuando *no* se cumple la condición | Detrás de cualquiera de los operadores
+`%like%`  | Similar a            | Cadenas de caracteres^[Requiere instalación y carga de data.table]
+
+Usando estos operadores y sus combinaciones podemos hacer prácticamente cualquier operación de filtrado de filas, empleando información de una o más columnas, siempre que estén dentro del data.frame al que estamos manipulando. Si bien es posible hacer filtrados sucesivos encadenando operaciones de `filter()` por cuestiones de desempeño --sobre todo en bases de datos muy grandes-- y compacitud del código es preferible cargar tantas condiciones como es posible en la misma cadena. Recuerde que cada vez que invocamos la función R debe recorrer todo el vector evaluando, es mejor que lo haga sólo una vez para un conjunto de condiciones complejas que muchas veces para condiciones simples.   
 
 ```{r filter_complejo}
 library(data.table)                                                      #Importa el operador %like%
+
 #Datos
 #=====
          
@@ -437,14 +454,15 @@ tribble(~Estado,            ~Municipio,          ~Población,
         "Nuevo León",       "Apodaca",           115913,
         "Nuevo León",       "Carmen",            4906 
         ) -> municipios
+
 #Dos condiciones. 
 filter(municipios, Municipio=="Juárez" & Población <400000)              #Municipios llamados Juárez con población menor a 400000.
 
 #Cadenas similares
-filter(municipios, Municipio %like% "Juárez" & Población <400000)        #Incluye Unión Juárez, similar a "Juárez"
+filter(municipios, Municipio %like% "Juárez" & Población <400000)        #Incluye Unión Juárez, similar a "Juárez", no Acapulco o CD Juáres por la 2da condición. 
 
 #Una u otra condición.
-filter(municipios, Municipio =="Juárez" | Población==137927)             #Municipios llamados Juárez o con una población de 137927
+filter(municipios, Municipio =="Juárez" | Población==137927)             #Municipios llamados Juárez o con una población de 137927 (Milpa Alta)
 
 #No es igual.
 filter(municipios, Estado!="Chihuahua" & Población>400000)               #Población superir a 40000 habitantes, NO en Chihuahua. 
@@ -456,36 +474,58 @@ filter(municipios, Municipio %in% filtro)                                #Perten
 
 ##Transformacion avanzada de datos. 
 
-Usándolo con cuidado `mutate()` es una herramienta muy potente para hacer transformaciones de datos. En términos muy prácticos `mutate()` une un vector resultado de una función al data.frame con el que estamos trabajando. Es decir, cualquier función que tome uno o más vectores y nos regrese otro  puede utilizarse dentro de `mutate()`, incluyendo algunas básicas como `ifelse()` para operaciones condicionales vectoriales, `cumsum()` para sumas acumuladas. `lag()` y `lead()` mueven un vector una línea abajo o hacia arriba respectivamente, permitiéndonos computar la diferencia  entre una fila y la anterior o posterior. También es posible pasar varias transformaciones al mismo tiempo separándolas con comas.
+Usándolo con cuidado `mutate()` es una herramienta muy potente para hacer transformaciones de datos. En términos muy prácticos `mutate()` une un vector resultado de una función al data.frame con el que estamos trabajando. Es decir, cualquier función que tome uno o más vectores y nos regrese otro  puede utilizarse dentro de `mutate()`, incluyendo algunas básicas como `ifelse()` para operaciones condicionales vectoriales, `cumsum()` para sumas acumuladas. `lag()` y `lead()` para mover un vector una línea abajo o hacia arriba respectivamente, permitiéndonos computar la diferencia  entre una fila y la anterior o posterior. También es posible pasar varias transformaciones al mismo tiempo separándolas con comas.
 La familia ampliada de `mutate()` incluye `mutate_all()`, para aplicar la misma transformación a todas las variables, `mutate_if()` que aplica una transformación a las variables que cumplen con una condición. 
 
 ```{r}
+#Dicotomiza una variable continua. ifelse()
 municipios %>%
   mutate (tamaño= ifelse(Población >400000, "Muy poblado", "Poco poblado"))
+
+#Calcular la diferencia entre filas con lag()
 municipios %>% 
   mutate (acumulado = cumsum(Población), diferencia=Población-lag(Población)) 
+
+#Aplicae la misma transformación a todas las variables numéricas con mutate_if()
 municipios %>%
   mutate (acumulado = cumsum(Población), diferencia=Población-lag(Población)) %>% 
-  mutate_if(is.numeric, funs(paste("Son", . , "personas")))                        #Aplica la misma transformación a todas las variables numéricas.
-municipios %>% mutate_all(as.character)                                            #Transforma a todas las colunas al tipo caracter.
+  mutate_if(is.numeric, funs(paste("Son", . , "personas")))                        
+
+#Transformae a todas las colunas al tipo caracter con mutate_all()
+municipios %>% mutate_all(as.character)                                            
 ```
 ##Sumarios avanzados. 
 
-`summarise()` nos permite crear sumarios y es especialmente útil con datos agrupados. Sin embargo es posible que no exista una función que cree el sumario que necesitamos. Podemos pasar a `summarise()` una función personalizada. En este caso estimaremos la media de población para nuestra muestra, el desvío estandar y el error estandar de la media: $SE\hat{x}=\frac{\sigma}{\sqrt{n}}$
+`summarise()` nos permite crear sumarios y es especialmente útil con datos agrupados. Sin embargo es posible que no exista una función que produzca el sumario que necesitamos. En ese caso podemos pasar a `summarise()` una función personalizada, ya sea una función que hemos definido previamente y hemos asignado nombre o una función anónima o función lambda. En este caso estimaremos la media de población para nuestra muestra, el desvío estandar y el error estandar de la media. Crearemos una función para calcular el error estándar traduciendo a R la notación matemática del error estándar: $SE\hat{x}=\frac{\sigma}{\sqrt{n}}$, el error estándar de la media es igual al desvío estándar entre la raíz cuadrada de n.
 
 ```{r summarise_avanzado}
-summarise(municipios, n=n(), media=mean(Población), desvio=sd(Población), error_estandar=sd(Población)/sqrt(sum(Población)))
+#Con una función ad hoc, creada en la misma sintaxis.
+summarise(municipios, n=n(), media=mean(Población), desvio=sd(Población), error_estandar=sd(Población)/sqrt(n()))
+
+#Con una función predefinida. 
+#Defino de una función para calcular el error estandar de la media. La llamo es_media
+es_media <- function(x) {
+  sd(x)/sqrt(length(x))
+}
+
+#La utilizo como cualquier otra función de R. 
+summarise(municipios, n=n(), media=mean(Población), desvio=sd(Población), error_estandar=es_media(Población))
+
+#Versión robusta de la función es_media: si n=1 regresa NaN, Not a Number. No se puede estimar el error estandar con n=1
+#Sobreescribe la función anterior. 
+
+es_media <- function(x) {
+  ifelse(length(x)==1, NaN, sd(x)/sqrt(length(x)))}
 
 municipios %>% 
   group_by(Estado) %>% 
   summarise(n=n(), 
             media=mean(Población), 
             desvio=sd(Población), 
-            error_estandar=sd(Población)/sqrt(sum(Población))) #NaN: Not a Number. No se puede calcular desvío y error estandar con n=1.  
-
+            error_estandar=es_media(Población))  
 ``` 
 
-###Funciones avanzadas de combinación de bases de datos.
+##Funciones avanzadas de combinación de bases de datos.
 
 `dplyr::` nos permite tiene algunos verbos muy usuales en el software de manejo de bases de datos que sirven para combinar múltiples fuentes de datos: los joins o uniones. Sin la sintaxis complicada de un lengujae como SQL podemos combinar bases de datos de manera flexible y aprovechar múltiples fuentes de datos, siempre que tengan al menos una columna que coincida. Podríamos usarlo para unir dos bases de datos con la misma unidad de análisis territorial o para combinar estructuras de datos asimétricas en cuanto al largo.  
 
@@ -493,43 +533,52 @@ municipios %>%
 #Unir varias estructuras de datos 
 #================================
 
-inner_join(frutería1, frutería2, by = "Fruta")  #Une las filas en las que coinicen frutería1 y frutería2, usando Fruta como clave. Sólo conserva las coincidencias, mandarina desaparece porque no tiene precio futuro.
+#Une las filas en las que coinicen frutería1 y frutería2, usando Fruta como clave. Sólo conserva las coincidencias, mandarina desaparece porque no tiene precio futuro.
+inner_join(frutería1, frutería2, by = "Fruta")  
 
-full_join(frutería1, frutería2, by = "Fruta")   #Une todas las filas, imputa NA cuando hay información faltante. No precio futuro para Mandarina y falta información para Toronja.
+#Une todas las filas, imputa NA cuando hay información faltante. No precio futuro para Mandarina y falta información para Toronja.
+full_join(frutería1, frutería2, by = "Fruta")   
 
-anti_join(frutería1, frutería2, by = "Fruta")   #Conserva sólamente las filas frutería1 que no coinciden con frutería2. 
+#Conserva sólamente las filas frutería1 que no coinciden con frutería2. 
+anti_join(frutería1, frutería2, by = "Fruta")   
 
-anti_join(frutería2, frutería1, by = "Fruta")   #Conserva las filas de frutería2 que no cinciden con frutería1.
+#Conserva las filas de frutería2 que no cinciden con frutería1.
+anti_join(frutería2, frutería1, by = "Fruta")  
 
-left_join(frutería1, frutería2, by = "Fruta")   #Conserva sólo las filas de frutería1 y agregas las columnas de frutería2, imputa NA si no hay coincidencia. Hay mandarina, pero no toronja...
+#Conserva sólo las filas de frutería1 y agregas las columnas de frutería2, imputa NA si no hay coincidencia. Hay mandarina, pero no toronja...
+left_join(frutería1, frutería2, by = "Fruta")   
 ```
 
 ##Operadores avanzados de `magrittr::`
 
-Ya hemos utilizado el principal operador de `magrittr::`, la tubería `%>%` que estádisponible directamente en `dplyr::`. Entender el funcionamiento de `%>%`  puede ayudarnos a conocer sus límites y buscar alternativas para solucionar algunos problemas. En términos técnicos `%>%` es un operador binario, de la misma familia de `+` para sumar o `-` para restar. Son binarios porque se ubican entre dos expresiones y establecen una relación entre ellas. A las dos expresiones que envuelven a un operador binario las llamados *lado derecho* y *lado izquierdo*. Así, en la resta o en la división es de gran importancia ese orden, no es lo mismo `10-2` que `2-10`. Con los operadores de magrittr pasa exactamente lo mismo, la expresión que está del lado derecho pasa su output a la del lado izquierdo. R no contempla un método específico para pasar los datos de una función a la siguiente, pero el autor de `magrittr::` encontró una manera ingeniosa. Dado que la mayoría de las funciones toma a los datos como primera argumento `%>%` se encarga de "reescribir" la función del lado izquierdo, de manera el primer argumento sean los datos que produjo el lado derecho de la formula. Esto funciona en la mayoría de los casos, pero podemos tener problemas de la función que estamos utilizando en el lado izquierdo espera algo diferente a los datos como primer argumento. Asi con los modelos lineales que especificamos con `lm()`, esperan como primer argumento de la función la formula del modelo, no los datos. Para solucionar estos problemas `magrittr::` utiliza al signo `.` (un punto) como "comodín" para los datos y nos permite ubicarlos allí donde la sintaxis de la función del lado izquierdo los requiera. 
+Ya hemos utilizado el principal operador de `magrittr::`, la tubería `%>%` que estádisponible directamente en `dplyr::`. Entender el funcionamiento de `%>%`  puede ayudarnos a conocer sus límites y buscar alternativas para solucionar algunos problemas. `%>%` es un operador binario, es decir, relaciona un lado izquierdo y un lado derecho. La expresión que está del lado derecho pasa su output a la del lado izquierdo. R no contempla un método específico para pasar los datos de una función a la siguiente, pero el autor de `magrittr::` encontró una manera ingeniosa. Dado que la mayoría de las funciones toma a los datos como primera argumento `%>%` se encarga de "reescribir" la función del lado izquierdo, de manera el primer argumento sean los datos que produjo el lado derecho de la formula. Esto funciona en la mayoría de los casos, pero podemos tener problemas de la función que estamos utilizando en el lado izquierdo espera algo diferente a los datos como primer argumento. Asi con los modelos lineales que especificamos con `lm()`, esperan como primer argumento de la función la formula del modelo, no los datos. Para solucionar estos problemas `magrittr::` utiliza al signo `.` (un punto) como "comodín" para los datos y nos permite ubicarlos allí donde la sintaxis de la función del lado izquierdo los requiera. 
 Otro operador avanzado es `%T>%`, que nos permite hacer una --breve-- bifurcación. Cuando lo ubicamos detrás de una función `%T>%%` hace que esta regrese el lado izquierdo y no el derecho. Así, si queremos hacer visible un resultado intermedio usanda la función `print()`, que luego pasará a la siguiente función no su output sino el que está a su izquierda. `%T>%` funciona solamente para dar un salto, no más que eso. A veces no es suficiente, podríamos estar interesados en dar algo de formato a los datos intermedios que queremos imprimir y eso implicaría al menos dos saltos. En ese caso podemos envolver las funciones intermedias con `{}` y poner el operador unario `.` al final, de modo que pase los datos de la izquierda de `{}` a la función siguiente. Dentro de los límites de `{}` puedo hacer cualquier manipulación y generar cualquier outupt.
 
-Por último el operador `%$% pasa al lado derecho una serie de vectores en lugar de la estructura original de los datos --que con frecuencia es un data podría serlo un data.frame--. Esto es especialmente útil cuando del lado derecho tenemos una función que espera vectores, ya que nos ahorra la permanente llamada con `$` para especificar el data.frame del que tiene que extraer el vector. 
+Por último el operador `%$%` pasa al lado derecho una serie de vectores en lugar de la estructura original de los datos --que con frecuencia es un data podría serlo un data.frame--. Esto es especialmente útil cuando del lado derecho tenemos una función que espera vectores, ya que nos ahorra la permanente llamada con `$` para especificar el data.frame del que tiene que extraer el vector. 
 
 ```{r magrittr}
 library(magrittr)       #Para disponer de todos los operadores. 
 
+#Bifurcación con %T>%
 municipios %T>%         #Marco la bifurcación
   print() %>%           #print() imprime los datos y pasa a la derecha los datos crudos, no su impresión.  
   group_by(Estado) %>% 
   tally() 
 
+#Uso de . en lugar de los datos.
 municipios %>% 
-  mutate(Pob2 = Población*2) %>%         #Creo una nueva variable numérica, doble de la población. 
-  lm(Pob2~Población, data=.) %>%         #Genero el modelo y lo paso a la derecha.
-  summary()                              #Obtengo el sumario del modelo. ^2=1
+  mutate(Pob2 = Población*2) %>%         #Creo una nueva variable numérica, el doble de la población. 
+  lm(Pob2~Población, data=.) %>%         #Genero el modelo, en el argumento data= va el . Lo paso a la derecha.
+  summary()                              #Obtengo el sumario del modelo. R^2=1
 
+#Bloque de código separado con {}.
 municipios %>% {                                                   #Abro una llamada      
   foo = rename(., "Est"=Estado, "Mun"=Municipio, "Pob"=Población)  #Cambios los nombres de colunma y los asigno a foo.
   print(foo)                                                       #Imprimo foo
   . } %>%                                                          #Regreso los datos originales "." a la función de la derecha
   print()                                                          #Imprimo los datos originales. 
 
+#Pasar vectores al lado derecho con %$%
 municipios %$% 
   table (Estado, Municipio)  %T>%       #table se lleva mejor con vectores que con data.frame
   print() %>%                           #Imprimo la tabla
@@ -537,21 +586,20 @@ municipios %$%
 ```
 
 
-##Límites de `dplyr::`
+#Límites de `dplyr::`
 
-La potencia y simplicidad del abordaje de `dplyr::` para la manipulación de datos no hace que esté excento de limitaciones. El primer problema es conceptual: los datos aquí son una entidad abstracta. Lleva algún tiempo acotumbrarse a no tener un registro visual de nuestra materia de trabajo y todavía más a que ni siquiera tengan nombre. Sin embargo armando las cadenas paso a paso podremos ver en consola el output de cada función y tener claro que datos estamos pasando a la función siguiente. Y, en verdad, no tener que llevar registro de los múltiples nombres que nuestros datos pueden adquirir a lo largo del análisis es en realidad gran ventaja. 
-Otros problemas son tecnicos y demandan mucha flexibilidad y creatividad al momento de escribir código. Para mantenernos en el paradigma de programción funcional debemos buscar formas diferentes de lograr los mismo. 
+La potencia y simplicidad del abordaje de `dplyr::` para la manipulación de datos no hace que esté excento de limitaciones. 
+El primer problema es conceptual: los datos aquí son una entidad abstracta. Lleva algún tiempo acotumbrarse a no tener un registro visual de nuestra materia de trabajo y todavía más a que ni siquiera tengan nombre. Sin embargo armando las cadenas paso a paso podremos ver en consola el output de cada función y tener claro que datos estamos pasando a la función siguiente. Y, en verdad, no tener que llevar registro de los múltiples nombres que nuestros datos pueden adquirir a lo largo del análisis es en realidad gran ventaja. 
+Otros problemas son tecnicos y demandan mucha flexibilidad y creatividad al momento de escribir código. Para mantenernos en el paradigma de programción funcional debemos buscar formas diferentes de lograr los mismo. La elegancia de `dplyr::` se debe en gran medida a que se concentra en una sola estructura de datos, el data.frame. Al hacerlo puede ocultar mucha de la complejidad de la manipulación de datos al usuario, conoce la estructura con la que trabaja y puede traducir los comandos simples que le introducimos a comandos mucho más complejos que son los que en realidad ejecuta. Con la elegancia viene una limitación: si necesitamos trabajar con una estructura de datos diferente al data.frame `dplyr::` fracasa completamente. 
 Valgan como ejemplo las dificultades para manejar dos versiones de los mismos datos en una misma cadena. `dplyr::` está pensado para trabajar con sólo con un conjunto de datos con estructura data.frame --cuando usamos un join estamos conviertiendo a dos conjuntos de datos en uno solo-- en busca de un único resultado. Existen maneras de producir y generar el output de resultados intermedios, por ejemplo, usando la tubería %T>% para salidas muy simples o generando una función lambda que encapsule el código de salida y regrese los datos al datos al final.
 
-El mayor problema es lograr que las cadenas de `dplyr::` se lleven bien con algunas funciones más antiguas de R, sobre todo aquellas que reciben vectores atómicos como imput. Esto es especialmente grave porque buena parte del atractivo de R es usar *esas* funciones específicas e irremplazables. ¿Le interesa el análisis de clases latentes multigrupos con ponderador muestral? La librería LCA lo hace, pero el primer argumento de la función es un objeto de la clase fórmula y el resultado una lista de matrices multidimensionales. `dplyr::` no será de mucha ayuda. En este y otros casos `dplyr::` nos llevará hasta cierto punto, luego no habrá más opción que asignar un nombre al output de la cadena y seguir a pié^[Una recomendación en estos casos es remover del entorno el objeto de datos al que asignamos nombre después de utilizarlo. Ya ha cumplido su función, deberíamos descartarlo.]. Si esto ocurriera solamente con funciones muy especializadas no sería un problema tan grande, pero ocurre en casos tan comunes como una prueba $\chi$^2^.^[`chsiq.test()` admite una tabla como imput, `table()` produce tablas, pero recibe vectores como imput.] Conocer estos límites será siempre de gran ayuda.     
+El mayor problema es lograr que las cadenas de `dplyr::` se lleven bien con algunas funciones más antiguas de R, sobre todo aquellas que reciben vectores atómicos como imput o producen listas como output. Esto es especialmente grave porque buena parte del atractivo de R es usar *esas* funciones específicas e irremplazables. ¿Le interesa el análisis de clases latentes multigrupos con ponderador muestral complejo? La librería LCA lo hace, pero el primer argumento de la función es un objeto de la clase fórmula y el resultado una lista de matrices de cuatro dimensiones, para las que `dplyr::` no será de ninugna ayuda. En este y otros casos `dplyr::` nos llevará hasta cierto punto, luego no habrá más opción que asignar un nombre al output de la cadena y seguir a pié^[Una recomendación en estos casos es remover del entorno el objeto de datos al que asignamos nombre después de utilizarlo. Ya ha cumplido su función, deberíamos descartarlo.]. Si esto ocurriera solamente con funciones muy especializadas no sería un problema tan grande, pero ocurre en casos tan comunes como una prueba $\chi$^2^.^[`chsiq.test()` admite una tabla como imput, `table()` produce tablas, pero recibe vectores como imput.] Conocer estos límites será siempre de gran ayuda.     
 
-Otro potencial problema es que los métodos de `dplyr::` suelen fallar cuando la base de datos no está limpia y adecuadamente codificada, con los casos missing explícitamente señalados y sin errores de ortografía^[Los errores ortográficos o de estilo en la codificación de una base de datos son un tema menor. Para R "México", "MEXICO", "Mexico", "méxico" son cuatro cadenas de caracteres completamente diferentes.]. Personalmente no creo que esto sea un problema, más bien es una virtud. Dar soluciones ad hoc a los errores de nuestros datos en el momento en el que lo necesitamos es una pésima práctica. Nos garantiza volveremos a encontrar con ese error u otro similar más abajo en el código. Es mejor arreglarlo desde un princio. Todavía mejor es generar una función personalizada que hace los arreglos necesarios e invocarla cada vez que es necesario. De este modo garantizamos la inmutabilidad de los datos. ¿Encontramos un nuevo error que había pasado inadvertido? Solo cambiamos esta función y cuando volvamos a ejecutar el código que la incluye realizará los cambios pertinentes. Un pilar del paradigma de programación funcional es que su entorno de trabajo debería estar poblado de funciones, no de estructuras de datos. Idealmente debería haber sólo un set de datos. 
+Otro potencial problema es que los métodos de `dplyr::` suelen fallar cuando la base de datos no está limpia y adecuadamente codificada, con los casos missing explícitamente señalados y sin errores de ortografía^[Los errores ortográficos o de estilo en la codificación de una base de datos son un tema menor. Para R "México", "MEXICO", "Mexico", "méxico" son cuatro cadenas de caracteres completamente diferentes.]. Personalmente no creo que esto sea un problema, más bien es una virtud. Dar soluciones ad hoc a los errores de nuestros datos en el momento en el que lo necesitamos es una pésima práctica. Nos garantiza volveremos a encontrar con ese error u otro similar más abajo en el código. Es mejor arreglarlo desde un princio. Todavía mejor es generar una función personalizada que hace los arreglos necesarios e invocarla cada vez que es necesario. De este modo garantizamos la inmutabilidad de los datos. ¿Encontramos un nuevo error que había pasado inadvertido? Solo cambiamos esta función y cuando volvamos a ejecutar el código que la incluye realizará los cambios pertinentes. Un pilar del paradigma de programación funcional es que su entorno de trabajo debería estar poblado de funciones, no de estructuras de datos. 
 
-Algo sobre data.table. 
+#Manipulación con `dplyr::`en la práctica. Flujo de trabajo.
 
-#Flujo de trabajo con `dplyr::`
-
-En términos muy estilizados el flujo de trabajo del análisis **exploratorio** de datos sería el siguiente.^[Nótese el énfasis en exploratorio. Este flujo de trabajo no está organizado alrededor de una hipótesis y utiliza poco o nada del conocimiento disponible sobre un tema. Al carecer de estado del arte y de marco de hipótesis no es un proceso de investigación. Está orientado a familizarizarnos con los datos, identificar y visualizarr patrones y relaciones y, llegado el caso, generar nuevas hipótesis.] 
+En términos muy estilizados el flujo de trabajo del análisis **exploratorio** de datos sería el siguiente.^[Nótese el énfasis en exploratorio. Este flujo de trabajo no está organizado alrededor de una hipótesis y utiliza poco o nada del conocimiento disponible sobre un tema. Al carecer de estado del arte y de marco de hipótesis no es un proceso de investigación. Está orientado a familizarizarnos con los datos, identificar y visualizar patrones y relaciones y, en el mejor de los casos, generar nuevas hipótesis. Dicho sea de paso, ni R ni ninguna plataforma de software producen buena investigación o análisis lúcidos, use dplyr, R base o papel y lápiz. A lo sumo pueden facilitarnos los aspectos técnicos y dejarnos más tiempo disponible para investigar o analizar.] 
 
 
 ```{r flujo}
@@ -600,15 +648,15 @@ end
 #====================
 
 library(tidyverse)      #Carga varias librerías. 
-library(pander)
-base_marginacion <- #Nombre que daremos al objeto después de importado. read_csv siempre produce un data.frame.
+library(pander)         #Para formatear salidas en tablas. 
+base_marginacion <-     #Nombre que daremos al objeto después de importado. read_csv siempre produce un data.frame.
   read_csv("C:/Users/mpaladino/Downloads/Base_Indice_de_marginacion_municipal_90-15.csv", col_types = cols(`AÑO` = col_character()), locale = locale(encoding = "UTF-8"))
 
 #Limpieza de la base de datos. 
 #============================
 
 #Generamos una función que limpia los datos, NO unos datos nuevos limpios!! De este modo podemos limpiar la base ad hoc, cuando nos hace falta y sin efectos colaterales. 
-#Agregamos cada línea necesaria para la limpieza. Al interior de la función asignamos con =, de modo de no cargar de objetos al entorno global. 
+#Agregamos cada línea necesaria para la limpieza. Al interior de la función asignamos con =, de modo de no asignar de objetos al entorno global. 
 
 limpiar <- function(datos) {
   datos=select(datos, -`<U+FEFF>CVE_MUN`, -CVE_ENT, -CVEE_MUN, -IND0A100,  -LUGAR_NAC, -LUGAR_EST)
@@ -635,17 +683,17 @@ recodificar <- function(datos){
 #En tabla.
 
 base_marginacion %>% 
-  limpiar %>% 
-  recodificar %>% 
+  limpiar() %>% 
+  recodificar() %>% 
   filter (AÑO=="2015" & ENT!="Nacional") %>% 
-  summary %>% 
+  summary() %>% 
   pander
 
-#Gráfico para variables numéricas. 
+#Gráfico condensado para variables numéricas. 
 
 base_marginacion %>% 
-  limpiar %>% 
-  recodificar %>% 
+  limpiar() %>% 
+  recodificar() %>% 
   filter (AÑO=="2015" & ENT!="Nacional") %>% 
   keep (is.numeric) %>% 
   gather(Variable, valor) %>% 
@@ -653,19 +701,20 @@ base_marginacion %>%
   geom_density() + 
   facet_wrap(~Variable,scales="free")
 
-#Para los factores. 
+#Gráfico condensado para variables categóricas. (factores). 
 
 base_marginacion %>% 
-  limpiar %>% 
-  recodificar %>% 
+  limpiar() %>% 
+  recodificar() %>% 
   filter (AÑO=="2015" & ENT!="Nacional") %>% 
   keep (is.factor) %>% 
   gather(Variable, valor) %>% 
   ggplot(aes(valor)) +
   geom_bar() + 
-  facet_wrap(~Variable,scales="free") + theme(axis.text = element_text(angle=90))
+  facet_wrap(~Variable,scales="free") + 
+  theme(axis.text = element_text(angle=90))
 
-#Relaciones entre variables numéricas. chart.Correlation ftw! 
+#Relaciones entre variables numéricas. 
 
 library(corrplot)
 base_marginacion %>% 
@@ -674,7 +723,7 @@ base_marginacion %>%
   filter (AÑO=="2015" & ENT!="Nacional") %>% 
   keep (is.numeric) %>% 
   cor %T>% 
-  corrplot %>%
+  corrplot() %>%
   kable() 
   
 
@@ -692,4 +741,10 @@ base_marginacion %>%
        subtitle="Población proporcional a área",
        caption="Datos: CONAPO 2015") +
   theme(legend.position = "bottom")
+
+#Join de bases de datos. 
+#=======================
+  
+#Pendiente. 
+  
 ```

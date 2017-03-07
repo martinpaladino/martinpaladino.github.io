@@ -24,11 +24,44 @@ Mis caprichos:
 
 #Guías de  R.
 
+##[Aplicación del paradigma de programación funcional para el análisis de datos en R.](https://martinpaladino.github.io/programacion_funcional.html)
+
+**BORRADOR**
+
+- Conceptos de la programación funcional aplicables a la investigación reproducible. 
+  - Inmutabilidad de los datos. 
+  - Transparencia referencial. 
+  - Funciones puras. 
+
+##[Manipulación de datos con dplyr](httpss://martinpaladino.github.io/manipulacion_de_datos_con_r_dplyr_y_tidyr.html)
+
+Resumida en cuatro operaciones:
+
+- Extraer subconjuntos de datos. 
+  - Selección de columnas. 
+  - Filtrado de filas.  
+- Transformarlos. 
+  - Recodificaciónd de variables categóricas. 
+  - Operaciones aritméticas sobre variables numéricas.
+- Obtener sumarios. 
+  - Para el conjunto de los datos.
+  - Por grupos.  
+-Unir múltiples bases de datos. 
+
 ##[Gráficos con R y ggplot](https://martinpaladino.github.io/graficos_con_r_y_ggplot.html)
 
--Desde la gramática de los gráficos hasta gráficos multivaridos. 
+- Desde la gramática de los gráficos hasta gráficos multivaridos. 
+  - Definición concetual de gráficos y sus elementos. 
+- Gráficos básicos por tipos: columnas, línea, dispersión.
+- Gráficos multivariados.
+  - Con claves de color o símbolos.
+  - Multipanel.
+- Control del aspecto estético de los gráficos. 
+  - Con estilos visuales predefinidos. 
+  - Personalizado. 
+- Gráficos exploratorios con sintaxis simplificada. 
+  
 
-##[Manipulación de datos con dplyr]()
 
 #Ejercicios. 
 

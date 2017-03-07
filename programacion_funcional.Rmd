@@ -1,8 +1,16 @@
 ---
-title: "programacion_funcional"
-author: "Martín Paladino"
-date: "6 de marzo de 2017"
-output: html_document
+title: "R como lenguaje de programación funcional"
+subtitle: "Aplicado a la investigación reproducible"
+author: "Martín Paladino^[mpaladino@mora.edu.mx]"
+date: "Borrador"
+lang: es-ES
+output: 
+  html_document: 
+    fig_height: 8
+    fig_width: 10
+    highlight: tango
+    theme: united
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
