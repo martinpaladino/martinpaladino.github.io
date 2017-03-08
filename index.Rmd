@@ -5,7 +5,7 @@ author:
 date: Actualizado el `r format(Sys.time(), "%d/%m/%Y")`
 output: 
   html_document: 
-    theme: journal
+    theme: united
 ---
 
 Esta es la página que acompaña al repositorio Rguias2. Incluye las salidas en .html de las guías de manejo de datos, gráficos y modelado en R.  
@@ -65,6 +65,19 @@ Resumida en cuatro operaciones:
 
 #Ejercicios. 
 
+##[Series de tiempo con R](https://martinpaladino.github.io/series_de_tiempo_con_R.html)
+
+Le viene incluyendo todo lo que es...
+
+- Importación de datos con fechas. 
+    - Conversión de caracteres a fechas con `lubridate()`
+- Manipulación de datos en formato de fecha en R.
+    - Sumarios de series de tiempo con periodización. 
+    - Operaciones aritméticas con fechas. 
+- Gráficos de series de tiempo. 
+- Descomposición de series de tiempo. 
+    - Gráficos de descomposición de series de tiempo. 
+    
 ##[Agregar un nivel de agrupamiento a una base de datos existente](https://martinpaladino.github.io/Datos_jerarquicos.html)
 
 Ejercicio práctico de manipulación de datos en R. 
