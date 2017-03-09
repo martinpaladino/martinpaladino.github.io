@@ -1,5 +1,5 @@
 ---
-title: "R como lenguaje de programación funcional"
+title: "Investigación reproducible con R"
 author: "Martín Paladino^[mpaladino@mora.edu.mx]"
 date: "Borrador"
 output:
@@ -9,7 +9,7 @@ output:
     highlight: tango
     theme: united
     toc: yes
-subtitle: Aplicado a la investigación reproducible
+subtitle: "Aplicando el paradigma de programación funcional"
 lang: es-ES
 ---
 
@@ -27,23 +27,64 @@ Uno de los temas actuales en la investigación académica, especialmente la que 
 
 ![Investigación reproducible. Tomado de Rodríguez Sánchez et. al.](./reproducible.png)
 
-En principio sería suficiente con hacer públicos --siempre que sea posible-- los datos y adjuntar las sintaxis con la que los analizamos. Sin embargo esto implica que debemos mantener sicronizadas "manualmente" tres estructuras diferentes: los datos, el código y el texto. En verdad es mucho más fácil hacer que todo esto funcione si contamos con una plataforma de software unificada que procese tanto los datos como el código y el texto y a partir de estos elementos produzca salidas en formatos compatibles con la publicación: LaTeX, .pdf., .docx, etc. Esa plataforma existe y es completamente gratuita: se llama R y gracias al trabajo voluntario de personas como [Yihui Xie](https://yihui.name/en/), autor de la librería knitr, ha simplificado enormemente el proceso de la investigación reproducible. Usar en conjunto knitr, pandoc y LaTeX desde Rstudio es en verdad muy fácil y estas de librerías se encargan de prácticamente todo el proceso de edición: ejecutan el código R, conservan y dan formato a los resultados, agregan números de figuras y tablas, crean la bibliografías, tablas de referencias cruzadas, númeran las páginas y, como si fuera poco, organizam la ubicación de tablas y gráficos en el documento, evitando páginas en blanco y gráficos recortados.  Toda la cadena de software es open source y multiplataforma: corre exactamente igual en Linux, macOS o Windows.
+En principio sería suficiente con hacer públicos --siempre que sea posible-- los datos y adjuntar las sintaxis con la que los analizamos. Sin embargo esto implica que debemos mantener sincronizadas "manualmente" tres estructuras diferentes: los datos, el código y el texto. En verdad es mucho más fácil hacer que todo esto funcione si contamos con una plataforma de software unificada que procese tanto los datos como el código y el texto y a partir de estos elementos produzca salidas en formatos compatibles con la publicación: LaTeX, .pdf., .docx, etc. Esa plataforma existe y es completamente gratuita: se llama R y gracias al trabajo voluntario de personas como [Yihui Xie](https://yihui.name/en/), autor de la librería knitr, ha simplificado enormemente el proceso de la investigación reproducible. Usar en conjunto knitr, pandoc y LaTeX desde Rstudio es en verdad muy fácil y estas de librerías se encargan de prácticamente todo el proceso de edición: ejecutan el código R, conservan y dan formato a los resultados, agregan números de figuras y tablas, crean la bibliografías, tablas de referencias cruzadas, numeran las páginas y, como si fuera poco, organizan la ubicación de tablas y gráficos en el documento, evitando páginas en blanco y gráficos recortados.  Toda la cadena de software es open source y multiplataforma: corre exactamente igual en Linux, macOS o Windows.
 
-```{r cadena_de_software}
-#R -> Rmardown -> knitr -> pandoc ->html/word/latex -> MikTex, LiveTex
-#|-> R+md      ->md+output -> md a ->....-> latex a pdf
-#Git (control de versiones) 
+```{r cadena_de_software, fig.cap="Cadena de software libre para la investigación reproducible", echo=FALSE, warning=FALSE, message=FALSE}
+
+library(DiagrammeR)
+grViz("
+digraph cadena_reproducible {
+  graph [overlap=false]
+subgraph cluster_0 {  
+node [shape = tab, fontname = Helvetica]
+  C[label='Fuentes de datos']
+  D[label='Rmarkdown']
+  G[label='.html']
+  H[label='.docx']
+  I[label='.tex']
+  J[label='.pdf']
+
+node [shape=component]
+  B[label='Código R']
+  A[label='Texto markdown']
+
+node [shape=ellipse]
+  E[label='knitr']
+  F[label='pandoc']
+  L[label='MikTex']
+node [shape=septagon]
+N[label='Sitio web']
+
+label='Cadena de software libre \npara investigación reproducible'
+fontname=Helvetica
+A->D B->D C->D D->E E->F F->{G, H, I} I->L L->J G->N[dir=none]
+            }
+subgraph cluster_1 {
+
+K[label='Git']
+M[label='GitHub']
+D->K
+K->D
+
+K->M[dir=none]
+
+label='Control de versiones\n  y colaboración'
+fontname=Helvetica
+
+                   }
+}
+")
 
 ```
 
 ¿Qué ventajas tiene la investigación reproducible? La ventaja para la comunidad de investigadores ya fue expuesta. Para cada investigador o investigadora también las tiene. 
 La primera, también esbozada, es la *simplificación del flujo de trabajo* al utilizar  una solo plataforma de software. Es innecesario pasar por el penoso trabajo de realizar el análisis en un programa --digamos, Stata--, copiar los resultados, formatearlos en otro --digamos, Excel para las tablas y/o un editor de gráficos para estos-- y finalmente reunirlos en un documento de procesador de texto --digamos, Word; sólo para repetir la cadena cada vez que queremos introducir algún cambio, por mínimo que sea. Este proceso no solo es laborioso, también es propenso a errores y no deja rastros que nos permitan identificar con facilidad donde los cometimos: no hay una sintaxis o log del proceso, todo lo hicimos moviendo el ratón. Integrando todos los pasos en R los cambios, grandes o pequeños, se actualizan inmediatamente. Si hay error de sintaxis será ruidoso e interrumpirá el proceso, si hay un error conceptual o de otro tipo tendremos la sintaxis paso a paso de lo que hemos hecho y podremos identificarlo y solucionarlo. Podemos recorrer y validar el camino que nos lleva a nuestros resultados con gran facilidad. 
-La segunda es la aplicación de *control de versiones*. Uno de verdad, como el que implementa el algoritmo Git, no el control de cambios de Word, que nadie en su sano juicio utiliza y por buenos motivos. Para el investigador individual significa que podemos ir hacia atrás y hacia adelante en el avance del documento, comparar cambios, regresar si el camino que tomamos no nos gusta. Esto hace obsoletas tanto las versiones con múltiples nombres de un mismo archivo como los documentos que reservamos para párrafos sueltos. Para los equipos de trabajo que no es necesario pasar versión tras versión por correo electrónico: texto y código están en un repositorio compartido y permamentemente actualizado que, si se dieran conflictos de versiones, los resuelve automáticamente. También posibilita abrir bifurcaciones para probar ideas nuevas sin alterar el original. Al final y si lo consideramos mejor podemos reunirlo con el original. 
+La segunda es la aplicación de *control de versiones*. Uno de verdad, como el que implementa el algoritmo Git, no el control de cambios de Word, que nadie en su sano juicio utiliza y por buenos motivos. Para el investigador individual significa que podemos ir hacia atrás y hacia adelante en el avance del documento, comparar cambios, regresar si el camino que tomamos no nos gusta. Esto hace obsoletas tanto las versiones con múltiples nombres de un mismo archivo como los documentos que reservamos para párrafos sueltos. Para los equipos de trabajo que no es necesario pasar versión tras versión por correo electrónico: texto y código están en un repositorio compartido y permanentemente actualizado que, si se dieran conflictos de versiones, los resuelve automáticamente. También posibilita abrir bifurcaciones para probar ideas nuevas sin alterar el original. Al final y si lo consideramos mejor podemos reunirlo con el original. 
 La tercera es la posibilidad de *reutilizar nuestro propio trabajo*. No me refiero a hacer refritos para inflar el CV, me refiero a encontrarnos en el futuro con un problema que ya resolvimos y encontrar rápidamente esa solución para volver a implementarla. 
 
-¿Qué desafíos trae la investigación reproducible? El más inmediato es que posiblemente no estemos acostumbrados a utilizar las herramientas de software que lo implementan. No se trata de versiones diferentes de los paquetes de oficina o de análisis estadístico que usamos, se trata de software que emplea interfaces y metáforas totalmente diferentes. R, pandoc, LaTeX o Git no tienen ningún atisbo de isomorfismo, no intentan simular nuestras interacciones con objetos cotidianos para darnos una sensación de familiaridad o implementan menús para mostrarnos todas las opciones. Reciben sus comandos de manera escrita a través de una consola, misma en la que vemos los resultados, se manejan exclusivamente con archivos de texto que debemos editar con cuidado. Esta familia de software tiene una característica común: la curva de aprendizaje tiene pendiente alta al principio. R hace difícil lo fácil y fácil lo dificil, al menos en un comienzo.
+¿Qué desafíos trae la investigación reproducible? El más inmediato es que posiblemente no estemos acostumbrados a utilizar las herramientas de software que lo implementan. No se trata de versiones diferentes de los paquetes de oficina o de análisis estadístico que usamos, se trata de software que emplea interfaces y metáforas totalmente diferentes. R, pandoc, LaTeX o Git no tienen ningún atisbo de isomorfismo, no intentan simular nuestras interacciones con objetos cotidianos para darnos una sensación de familiaridad o implementan menús para mostrarnos todas las opciones. Reciben sus comandos de manera escrita a través de una consola, misma en la que vemos los resultados, se manejan exclusivamente con archivos de texto que debemos editar con cuidado. Esta familia de software tiene una característica común: la curva de aprendizaje tiene pendiente alta al principio. R hace difícil lo fácil y fácil lo difícil, al menos en un comienzo.
 
-```{r rversusexcel, fig.cap="Curva de aprendizaje y dificultad de problemas.", warning=FALSE, message=FALSE}
+```{r rversusexcel, fig.cap="Curva de aprendizaje y dificultad de problemas.", warning=FALSE, message=FALSE, echo=FALSE}
 library(tidyverse)
 tribble(~prog,  ~x, ~y,
         "Excel",  0, 0, 
@@ -74,8 +115,8 @@ tribble(~prog,  ~x, ~y,
                   theme_minimal()
 ```
 
-Llegado el punto en el que el manejo de R y en general de la cadena de software de investigación reproducible no son un problema aparecen otros. Esos problemas más avanzados son los que atenderemos en el resto del documento. Se trata de problemas conocidos a los que han buscado --y encontrado-- soluciones en el campo del desarrollo de software y lenguajes de programación. Entrar comandos en la consola de R es una cosa. Escribir un script con algunos comandos que, en conjunto, hacen algo más complejo, otra. Y escribir una tesis o un libro en el que haremos múltiples manipulaciones de datos, recodificaciones, transformaciones, gráficos y modelos otra muy diferente. Sin pudor o equivocados aires de superioridad podemos llamar a ese libro o esa tesis, producido en el marco de la investigación reproducible, un *programa*: código que cuando se ejecuta define estados de un sistema informático y cambia esos estados. Cada tipo de programa tiene sus dificultades, mayore so menores. Un programa de investigación reproducible --el código que produce el artículo, libro o tesis-- tiene como principal problema garantizar la integridad de los datos a lo largo del programa, es decir, evitar que sufran modificaciones que o rompen el código siguiente o, peor aún, producen errores silenciosos. Todos los programas comparten, eso sí, una misma dificultad: el mantenimiento o revisión del código. Ya sea que buscamos agregar una nueva característica a un sistema operativo o hacer correcciones a un artículo sin dudas volveremos sobre nuestro código y nos parecerá escrito por un completo desconocido  ¿en qué linea cambia `datos_reco_2`? ¿Contiene la recodificación de la variable x o esa está en `datos_reco_3`. Integridad de los datos y mantenibilidad del código son dos problemas con una solución: programación funcional. No es la manera obvia y dificilmente sea la que aplicamos cuando estamos aprendiendo a usar R. Dado que R es multiparadigma admite tanto programación imperativa o procedimental como programación funcional. La metáfora de tiempo espacio implícita en el script nos lleva sutilmente al paradgima imperativo: ¡R! haz esto y guardalo aquí, leelo, luego haz esto y guardalo allí, lee allí y luego haz esto. Una instrucción y una asignación por cada línea de código. 
-El paradigma funcional procura, en cambio, no asignar nombres en el entorno de trabajo en la medida de lo posible y encadenar funciones: pasar el output de una como input de la otra sin asignarles un nombre al input ni ial output. Puede parecer innecesariamente complejo, pero a medida que a medida que la complejidad de nuestro programa aumenta en realidad simplifica las cosas. En el paradigma imperativo debemos controlar las transformaciones de los datos a lo largo de todo el programa, en el funcional solamente dentro de la cadena de funciones que produce el resultado que estamos esperando. Bien implementado el paradigma funcional   
+Llegado el punto en el que el manejo de R y en general de la cadena de software de investigación reproducible no son un problema aparecen otros. Esos problemas más avanzados son los que atenderemos en el resto del documento. Se trata de problemas conocidos a los que han buscado --y encontrado-- soluciones en el campo del desarrollo de software y lenguajes de programación. Entrar comandos en la consola de R es una cosa. Escribir un script con algunos comandos que, en conjunto, hacen algo más complejo, otra. Y escribir una tesis o un libro en el que haremos múltiples manipulaciones de datos, recodificaciones, transformaciones, gráficos y modelos otra muy diferente. Sin pudor o equivocados aires de superioridad podemos llamar a ese libro o esa tesis, producido en el marco de la investigación reproducible, un *programa*: código que cuando se ejecuta define estados de un sistema informático y cambia esos estados. Cada tipo de programa tiene sus dificultades, mayores o menores. Un programa de investigación reproducible --el código que produce el artículo, libro o tesis-- tiene como principal problema garantizar la integridad de los datos a lo largo del programa, es decir, evitar que sufran modificaciones que o rompen el código siguiente o, peor aún, producen errores silenciosos. Todos los programas comparten, eso sí, una misma dificultad: el mantenimiento o revisión del código. Ya sea que buscamos agregar una nueva característica a un sistema operativo o hacer correcciones a un artículo sin dudas volveremos sobre nuestro código y nos parecerá escrito por un completo desconocido  ¿en qué linea cambia `datos_reco_2`? ¿Contiene la recodificación de la variable x o esa está en `datos_reco_3`. Integridad de los datos y mantenibilidad del código son dos problemas con una solución: programación funcional. No es la manera obvia y difícilmente sea la que aplicamos cuando estamos aprendiendo a usar R. Dado que R es multiparadigma admite tanto programación imperativa o procedimental como programación funcional. La metáfora de tiempo espacio implícita en el script nos lleva sutilmente al paradigma imperativo: ¡R! haz esto y guárdalo aquí, léelo, luego haz esto y guárdalo allí, lee allí y luego haz esto. Una instrucción y una asignación por cada línea de código. 
+El paradigma funcional procura, en cambio, no asignar nombres en el entorno de trabajo en la medida de lo posible y encadenar funciones: pasar el output de una como input de la otra sin asignarles un nombre al input ni al output. Puede parecer innecesariamente complejo, pero a medida que a medida que la complejidad de nuestro programa aumenta en realidad simplifica las cosas. En el paradigma imperativo debemos controlar las transformaciones de los datos a lo largo de todo el programa, en el funcional solamente dentro de la cadena de funciones que produce el resultado que estamos esperando. Bien implementado el paradigma funcional   
 
 ```{r imperativo_funcional}
 
@@ -100,60 +141,91 @@ ls()
 #Versión legible con sangrado de código. R lo evalúa como una sola línea. 
 
 plot(
-  na.omit(
-    data.frame(
-               x=c("a", "b", "c", "d", NA), 
-               y=rnorm(5, 0, 3)
-               )
-         )
-    )
-
+   na.omit(
+     data.frame(
+                x=c("a", "b", "c", "d", NA), 
+                y=rnorm(5, 0, 3)
+                )
+          )
+     )
 ```
 
-En lugar de ir transformando nuestros datos a lo largo del programa y registrando esos cambios asignándoles uno o más nombres crearemos los datos que necesitamos de manera ad hoc, en una cadena que inicia con los datos y culmina con el resultado esperado: una tabla, un gráfico, un modelo. Los datos no son un río que fluye y cambia de forma a medida avanza el programa: son un depósito del que sacamos una tubería cada vez que lo necesitamos. Si una se tapa las demás siguen funcionando. Seguiremos organizando nuestro código con una pauta de tiempo espacio: esto es investigación reproducible y los resultados de R deben estar en sincronizados con el texto que estamos escribiendo, que tiene su propia metáfora tiempo-espacio: más arriba es antes, más abajo después. Pero a los efectos ejecución del programa este es paralelo: hay una fuente inmutable de datos y multiples funciones que pueden procesarlos simultaneamente^[No es extraño que la programación funcional sea utilizada en aplicaciones que requieren procesamiento paralelo aprovechando los múltiples núcleos de procesamiento de las computadoras. Lamentablemente R, en su versión actual, tiene pocas capacidades para aprovechar el paralelismo implícito en el paradigma funcional. Ojalá esto cambie. Si escribimos código funcional podremos aprovechar ese paralelismo.]. Cada bloque está separado de los demás, no depende se sus resultados. Puedo eliminar bloques completos de código y el resto sigue funcionando. La integridad de los datos y el mantenimiento del código están garantizados.  
+En lugar de ir transformando nuestros datos a lo largo del programa y registrando esos cambios asignándoles uno o más nombres crearemos los datos que necesitamos de manera ad hoc, en una cadena que inicia con los datos y culmina con el resultado esperado: una tabla, un gráfico, un modelo. Los datos no son un río que fluye y cambia de forma a medida avanza el programa: son un depósito del que sacamos una tubería cada vez que lo necesitamos. Si una se tapa las demás siguen funcionando. Seguiremos organizando nuestro código con una pauta de tiempo espacio: esto es investigación reproducible y los resultados de R deben estar en sincronizados con el texto que estamos escribiendo, que tiene su propia metáfora tiempo-espacio: más arriba es antes, más abajo después. Pero a los efectos ejecución del programa este es paralelo: hay una fuente inmutable de datos y múltiples funciones que pueden procesarlos simultáneamente^[No es extraño que la programación funcional sea utilizada en aplicaciones que requieren procesamiento paralelo aprovechando los múltiples núcleos de procesamiento de las computadoras. Lamentablemente R, en su versión actual, tiene pocas capacidades para aprovechar el paralelismo implícito en el paradigma funcional. Ojalá esto cambie. Si escribimos código funcional podremos aprovechar ese paralelismo.]. Cada bloque está separado de los demás, no depende se sus resultados. Puedo eliminar bloques completos de código y el resto sigue funcionando. La integridad de los datos y el mantenimiento del código están garantizados.  
 
 ```{r, fig.cap="Esquema de los paradigmas funcional e imperativo", echo=FALSE}
 #Pasar a GraphViz: looks like shit.
+grViz("digraph boxes_and_circles {
+  graph [overlap = true, fontsize = 10]
+  node [shape = circle,
+        fontname = Helvetica, label ='Datos']
+  A, C
+    node [shape = circle,
+        fontname = Helvetica]
+  D [label ='Datos\nrecodificados\n2']
+  E [label ='Datos\nrecodificados']
+  node [shape = box,
+        fixedsize = false,
+        width = 0.9] 
+  1, 2, 3, 4, 5, 6
+  1[label= 'Función de \nrecodificación 1']
+  2[label= 'Función de \nrecodificación 2']
+  3[label= 'Función de \nrecodificación 3']
+  4[label='Análisis 1']
+  5[label='Análisis 2']
+  6[label='Análisis 3']
 
-library(DiagrammeR)
-DiagrammeR("graph TB
-subgraph Paradigma imperativo
-A((Datos)) --> B[Rutina de recodificación]
-B--Datos<br>recodificados-->C((Datos<br>recodificados))
-C-->D[Análisis 1]
-
-C-->E[Rutina de recodificación 2]
-E--Efecto colateral-->N((Datos<br>recodificados))
-N--Recibe estos datos-->F
-C-.Espera estos datos.->F[Análisis 3 <br> Espera datos originales]
-N-->O[Análisis 2]
-end
-subgraph Programación funcional
-G((Datos))-->H[Función de recodificación 1] 
-H-->I[Análisis 1]
-G-->J[Función de recodificación 2]
-J-->K[Análisis 2]
-G-->L[Función de recodificación 1]
-L-->M[Análisis 3]
-end
-"
-)
+subgraph cluster_0 {
+  A->{1, 2, 3} 
+  1->4
+  2->5
+  3->6
+  label='Programación funcional'
+  fontname=Helvetica
+  fontsize = 14
+}
+edge [fontname=Helvetica]
+subgraph cluster_1 { 
+  7[label='Rutina de \nrecodifición']
+  8[label='Análisis 1']
+  9[label='Análisis 2']
+  10[label='Análisis 3']
+  11[label='Rutina de \nrecodificación 2']
+  C->7
+  7->E
+  E->{8, 11}
+  11->D
+  D->{9,10}
+    E->10[style=dotted, label=' ¿O son\nestos\ndatos\nlos que\n necesito?']
+  E->10[style=dotted, label='', color='white']
+  label='Programación procedimental'
+  fontname=Helvetica
+  fontsize = 14
+                }
+}
+")
 ```
 
-##Filosofía: programación funcional con inmutabilidad de datos, transparencia referencial y funciones puras. 
+#Filosofía: programación funcional con inmutabilidad de datos, transparencia referencial y funciones puras. 
 
-R permite manipular datos de una forma sólo limitada por nuestra propia capacidad, es decir, es posible y probable que descubramos formas de corromper o deformar nuestros datos que nunca hubieramos imaginado. Dado que R no nos limita ni nos induce a determinadas maneras de programación es necesario que desarrollemos un conjunto de prácticas que eviten siempre que sea posible la corrupción de los datos y reduzcan la carga cognitiva del programador/analista reduciendo el número de objetos en el entornos. 
-Las líneas siguientes no son un manual de procedimientos sino un breve y simplificado excurso sobre teoría  de los lenguajes de programación y la forma en que podemos aprovecharla para crear prácticas y flujos de trabajo al mismo tiempo predecibles y flexibles que producen un código fácil de mantener. Con programas cortos y simples sobre los que estamos trabajando activamente el mantenimiento del código no es problemático: podemos recordar que hace cada línea y tener un registro mental de los nombres que vamos asignando a las estructuras de datos. Sabemos, por ejemplo, que `datos` son los datos originales, `datos2` una copia en la que recodificamos de cierto modo un variable y `datos` *después de la línea 25* incorporó esa recodificación. Sin embargo cuando el código crece en tamaño y complejidad y/o volvemos a trabajar sobre ese código después de un tiempo y ya no tenemos memorizadas las mutaciones a las que fuimos sometiendo a los datos a lo largo del programa estaremos ante un código dificil de mantener. Hacer una pequeña modificación -digamos, incorporar las observaciones de un dictamen- implicará varias horas de estudio de nuestro propio código hasta familiarizarnos nuevamente con la serie de transformaciones y estar en condiciones de hacer los cambios sin romper la sintaxis. La programación funcional es un paradigma de programación que elimina de raíz estos escenarios y está implementada en R desde sus orígenes.
+R permite manipular datos de una forma sólo limitada por nuestra propia capacidad, es decir, es posible y probable que descubramos formas de corromper o deformar nuestros datos que nunca hubiéramos imaginado. Dado que R no nos limita ni nos induce a determinadas maneras de programación es necesario que desarrollemos un conjunto de prácticas que eviten siempre que sea posible la corrupción de los datos y reduzcan la carga cognitiva del programador/analista reduciendo el número de objetos en el entornos. 
 
-R es un lenguaje multiparadigma, es decir, admite varias formas de obtener los mismos resultados. Pertinentes a este apartado son los paradigmas procedimentales y funcionales, ambos disponibles en R. Podemos combinarlos y de hecho en ocasiones no tendremos más alternativa que hacerlo, pero para evitar confusiones es mejor utilizar sólo uno de ellos y por lo ya dicho es todavía mejor utilizar solamente el paradigma funcional. 
-Los conceptos clave del paradigma funcional que aplicaremos son la inmutabilidadd de los datos, las funciones puras y la transparencia referencial. 
-Las funciones puras son aquellas que reciben un input y nos regresan un output y no producen efectos colaterales. Un efecto colateral es un efecto de la función que produce un cambio de estado del programa fuera del ámbito estricto esa función.^[Evidentemente no consideramos al output de la función como un efecto colateral.] Dado que no queremos cambiar estados más allá del imput-output de la función y que frecuentemente el resultado final esperado implica más de una función sería una buena idea poder encadenar funciones, de modo que el output de una sea el imput de la siguiente. Para esto nos ayuda la transparencia referencial, el último punto que tocaremos. 
-La transparencia referencial es una propiedad de los lenguajes de programación que hace mutuamente reeemplazables en la sintaxis a expresiones equivalentes. Dado que `1/2 = 0.5` en R podemos usar uno u otro indistintamente. Si nos interesa trabajar sobre variable transformada esto significa que en lugar de crear primero esa variable transformada, guardarla en algún lugar y pasarla posteriormente a otra función llamar directamente a la función de tranformación en lugar mismo en el que lo necesitamos. La transparencia referencial se encarga hacer la transformación en el momento adecuado. Inclusive nos permite hacer subconjutos sobre el output de una función  directamente en la llamada a la función. Así `rnorm(15, 0, 1)[3]` nos regresará el tercer valor del vector de número normales aleatorios que hemos creado, no es necesario asignar un nombre al vector y luego extraer el valor. 
+Las líneas siguientes no son un manual de procedimientos sino un breve y simplificado excurso sobre teoría  de los lenguajes de programación y la forma en que podemos aprovecharla para crear prácticas y flujos de trabajo al mismo tiempo predecibles y flexibles que producen un código fácil de mantener. Con programas cortos y simples sobre los que estamos trabajando activamente el mantenimiento del código no es problemático: podemos recordar que hace cada línea y tener un registro mental de los nombres que vamos asignando a las estructuras de datos. Sabemos, por ejemplo, que `datos` son los datos originales, `datos2` una copia en la que recodificamos de cierto modo un variable y que `datos` *después de la línea 25* incorporó esa recodificación. Sin embargo cuando el código crece en tamaño y complejidad y/o volvemos a trabajar sobre ese código después de un tiempo y ya no tenemos memorizadas las mutaciones a las que fuimos sometiendo a los datos a lo largo del programa estaremos ante un código difícil de mantener. Hacer una pequeña modificación -digamos, incorporar las observaciones de un dictamen- implicará varias horas de estudio de nuestro propio código hasta familiarizarnos nuevamente con la serie de transformaciones y estar en condiciones de hacer los cambios sin romper la sintaxis. La programación funcional es un paradigma de programación que elimina de raíz estos escenarios y está implementada en R desde sus orígenes.
+
+R es un lenguaje multiparadigma, admite varias formas de obtener los mismos resultados. Pertinentes a este apartado son los paradigmas procedimentales y funcionales, ambos disponibles en R. Podemos combinarlos y de hecho en ocasiones no tendremos más alternativa que hacerlo, pero para evitar confusiones es mejor utilizar sólo uno de ellos y por lo ya dicho es todavía mejor utilizar solamente el paradigma funcional.  
+
+Los conceptos clave del paradigma funcional que aplicaremos son la inmutabilidad de los datos, las funciones puras y la transparencia referencial. De la inmutabilidad de los datos ya hemos dicho que significa que los datos, una vez que fueron importados al entorno de R nunca serán modificados. 
+
+Las **funciones puras** son aquellas que reciben un input y nos regresan un output y no producen efectos colaterales. Un efecto colateral es un efecto de la función que produce un cambio de estado del programa fuera del ámbito estricto esa función.^[Evidentemente no consideramos al output de la función como un efecto colateral.] Dado que no queremos cambiar estados más allá del input-output de la función y que frecuentemente el resultado final esperado implica más de una función sería una buena idea poder encadenar funciones, de modo que el output de una sea el input de la siguiente. Para esto nos ayuda la transparencia referencial. 
+
+La **transparencia referencial** es una propiedad de los lenguajes de programación que hace mutuamente reemplazables en la sintaxis a expresiones equivalentes. Dado que `1/2 = 0.5` en R podemos usar uno u otro indistintamente. Si nos interesa trabajar sobre variable transformada esto significa que en lugar de crear primero esa variable transformada, guardarla en algún lugar y pasarla posteriormente a otra función llamar directamente a la función de transformación en lugar mismo en el que lo necesitamos. La transparencia referencial se encarga hacer la transformación en el momento adecuado. Inclusive nos permite hacer subconjuntos sobre el output de una función  directamente en la llamada a la función. Así `rnorm(15, 0, 1)[3]` nos regresará el tercer valor del vector de números normales aleatorios que hemos creado, no es necesario asignar un nombre al vector y luego extraer el valor. 
 Veamos algunas pruebas de estos conceptos en R aplicándolos a la estimación de una mediana y algunos problemas de de unión y separación de datos. La mediana es el valor que se ubica en el centro de un vector ordenado. Para obtenerla debemos primero ordenar al vector, luego ubicar la posición que divide al vector en 2 partes iguales y finalmente ver cuál es el valor que ocupa esa posición, es decir, $M_e=x_{(n+1)/2}$. 
 
 ```{r bloque1}
 
-#Bloque 1 
+
+#=======================================#
+#Bloque 1. Demostración de los conceptos#
+#=======================================#
 
 #Captura de datos.
 
@@ -170,7 +242,7 @@ data.frame(y=y, x=x)    #Combino x y y en una estructura rectangular
 
 x*x                     #x al cuadrado
 
-median(x)               #x mediana de x
+median(x)               #mediana de x
 
 x                       #x nunca se modificó
 
@@ -178,13 +250,13 @@ x                       #x nunca se modificó
 #========================================================================
 
 
-#Sin efectos colaterales, solo recibe x y regresa la mediana.. 
+#Programación funcional: sin efectos colaterales. La función recibe al vector y regresa la mediana. 
 
 sort(x)[(length(x)+1)/2]           
 
 x                          #x se mantiene igual.
 
-#Con efectos colaterales.  
+#Programación procedimental. Con efectos colaterales.  
 
 n <- length(x)
 x <- sort(x)
@@ -222,36 +294,39 @@ ifelse(length(x)%%2 == 0,                                                       
       )
 ```
 
-Como vemos en el Bloque 1 R se maneja tanto dentro de un paradigma procedimental --en el que modificamos estado del programa o de los datos línea por línea- como dentro de un paradigma funcional, en el que nunca modificamos el estado del programa o la estructura de los datos de modo que afecte al código siguiente. Cuando modificamos los datos lo hacemos *dentro* de funciones. De este modo x será siempre x, a lo largo de todo el programa, con los mismos datos en el mismo orden. Así se reduce notablemente la carga cognitiva del programador/analista, no es necesario verificar en cada paso que los datos no han perdido su integridad. R se encarga de administrar los nombres de los objetos, por lo tanto no son necesarias una convención y disciplina estrictas para nombrar objetos. También  evitamos completamente llevar a cabo prácticas riesgosas como el reciclado de nombres.^[Reciclamos nombres cuando en una misma sintaxis utilizamos el mismo nombre para objetos no identicos. Por ejemplo, el objeto `datos` al comienzo tiene determinada información y estructura, en un punto del programa por una necesidad puntual lo modificamos -digamos, recodificamos algunas de las variables- y mantenemos el nombre `datos`. Aquí hay dos problemas posibles: 1) Que necesitemos nuevamente los datos originales y debamos modificar una vez más `datos` para regresarlo a su forma original o, peor aún, que la recodificación falle por algún error pero R no detenga la ejecución, ya que la línea de código que invoca a `datos` recibirá un objeto con ese nombre, aunque con la información incorrecta. A esto nos referimos con *errores silenciosos*.]  
+Como vemos en el Bloque 1 R se maneja tanto dentro de un paradigma procedimental --en el que modificamos estado del programa o de los datos línea por línea- como dentro de un paradigma funcional, en el que nunca modificamos el estado del programa o la estructura de los datos de modo que afecte al código siguiente. Cuando modificamos los datos lo hacemos *dentro* de funciones. De este modo x será siempre x, a lo largo de todo el programa, con los mismos datos en el mismo orden. Así se reduce notablemente la carga cognitiva del programador/analista, no es necesario verificar en cada paso que los datos no han perdido su integridad. R se encarga de administrar los nombres de los objetos, por lo tanto no son necesarias una convención y disciplina estrictas para nombrar objetos. También  evitamos completamente llevar a cabo prácticas riesgosas como el reciclado de nombres.^[Reciclamos nombres cuando en una misma sintaxis utilizamos el mismo nombre para objetos no idénticos. Por ejemplo, el objeto `datos` al comienzo tiene determinada información y estructura, en un punto del programa por una necesidad puntual lo modificamos -digamos, recodificamos algunas de las variables- y mantenemos el nombre `datos`. Aquí hay dos problemas posibles: 1) Que necesitemos nuevamente los datos originales y debamos modificar una vez más `datos` para regresarlo a su forma original o, peor aún, que la recodificación falle por algún error pero R no detenga la ejecución, ya que la línea de código que invoca a `datos` recibirá un objeto con ese nombre, aunque con la información incorrecta. A esto nos referimos con *errores silenciosos*.]  
 
 
-###CODA:
+##CODA:
 
 **Use el asignador `<-` cuando sea estrictamente indispensable.**
 
 - Su uso se justifica solamente cuando hay una penalización  de desempeño muy alta. 
   - Como regla general, sólo asigne nombre a objetos cuya producción requiere demasiado tiempo. 
   - Importar datos leyéndolos de un archivo suele ser un proceso lento, hágalo sólo una vez al principio del programa y asigne un nombre al objeto resultante. 
-  - Lo mismo vale para alguna transformación basada en un algortimo complejo y que utilizará recurrentemente. 
-    - Por ejemplo, los modelos con efectos aleatórios para n grande son complejos de resolver y analizaremos en profundidad el resultado. En este caso un nombre al resultado en lugar de llamar a la función que produce el modelo una y otra vez. 
+  - Lo mismo vale para alguna transformación basada en un algoritmo complejo y que utilizará recurrentemente. 
+    - Por ejemplo, los modelos con efectos aleatorios para n grande son complejos de resolver y analizaremos en profundidad el resultado. En este caso un nombre al resultado en lugar de llamar a la función que produce el modelo una y otra vez. 
     - Las recodificaciones, partición de datos y unión de bases son muy rápidas en R y propensas a generar errores en el código que les sigue. Nunca asigne nombre en estos casos, llame directamente a la función pertinente.   
-- Por su paz mental nunca recible nombres: un objeto distinto requiere un nombre distinto. Nunca debería crear líneas del tipo `datos <- datos[algo]`, `datos_algo <- datos[algo]` es una mejor alternativa.  
-  - Si aún así prefiere asignar nombres a los datos transformados use una convención clara y sea estricto al respecto. El data.frame en el que  recodificó la variable V3 deberían llamarse `datos_recodificados_V3_dicotomica` o algo por el estilo. Nunca `datos2`, `datos_reco` u otros nombres que no le dan información sobre lo que contienen. Cuando lo escriba recordará perfectamente que hay ahí, en unos meses no. Si preferiría no tener que tiepar nombres tan largos puede usar programación funcional y simplemente no tendrá que tipear ningún nombre. 
+- Por su paz mental nunca recicle nombres: un objeto distinto requiere un nombre distinto. Nunca debería crear líneas del tipo `datos <- datos[algo]`, `datos_algo <- datos[algo]` es una mejor alternativa.  
+  - Si aún así prefiere asignar nombres a los datos transformados use una convención clara y sea estricto al respecto. El data.frame en el que  recodificó la variable V3 deberían llamarse `datos_recodificados_V3_dicotomica` o algo por el estilo. Nunca `datos2`, `datos_reco` u otros nombres que no le dan información sobre lo que contienen. Cuando lo escriba recordará perfectamente que hay ahí, en unos meses no. Si preferiría no tener que tipear nombres tan largos puede usar programación funcional y simplemente no tendrá que tipear ningún nombre. 
   
 **Use funciones siempre que sea posible.** 
 
 - En lugar de generar múltiples copias de un objeto a medida que lo transforma, genere múltiples funciones que hacen esas transformaciones sin efectos colaterales y llámelas cada vez que necesita los datos transformados.
 - Asegúrese de que las funciones que utiliza, incluyendo las que usted crea, sea puras. Sólo imput y output. 
   - R permite funciones lambda, es decir, funciones anónimas. Úselas para funciones ad hoc que no volverá a utilizar.
-- Si nota que está copiando y pengando código con frecuencia considere convertir ese código en una función. De este modo evitará posible errores en el copiado/pegado.
+- Si nota que está copiando y pegando código con frecuencia considere convertir ese código en una función. De este modo evitará posible errores en el copiado/pegado.
     - De ese modo si quiere hacer algún cambio a la sintaxis lo hará directamente en la función, produciendo efectos sobre todo el código que llama a esa función. No será necesario repetir el cambio en cada aparición de ese código. 
 - En la programación funcional los paréntesis reemplazan al salto de línea para organizar el orden de ejecución del programa. Esto que puede dificultar la lectura del código.  
   - Utilice tuberías para encadenar funciones. Tendrá un código mucho más legible.  
   - Utilice sangrías para hacer más legible su código: cada función y/o sus argumentos deberían estar en línea aparte. 
   - El único efecto colateral de la programación funcional es que tendrá que contar paréntesis. Si se toma el trabajo adicional de alinearlos será más fácil ubicar cuál abre y cual cierra cada función. 
-- Al finalizar su análisis su entorno de trabajo debería tener sólamente la o las fuentes de datos originales y las funciones con las que las transforma, nunca 15 o 20 versiones levemente diferentes y con nombres parecidos de los mismos datos. 
+- Al finalizar su análisis su entorno de trabajo debería tener solamente la o las fuentes de datos originales y las funciones con las que las transforma, nunca 15 o 20 versiones levemente diferentes y con nombres parecidos de los mismos datos. 
 
-###Pizzería "El asignador". Pizzas de hoy y de ayer.
+#Paradigmas de programación en R. 
+¡Hagamos pizza con R!
+
+##Pizzería "El asignador". Pizzas de hoy y de ayer.
 
 ```{r eval=F}
 #Pizzería "El asignador"
@@ -264,7 +339,7 @@ prepizza <- salsear (masa_estirada, salsa)
 pizza <- hornear (prepizza)
 ```
 
-###Pizzería La funcional clásica.
+##Pizzería La funcional clásica.
 
 ```{r eval=F}
 #Pizzero La funcional
@@ -281,7 +356,7 @@ pizza(
      
 ```
 
-### Pizzería magrittr ¡La más %>% del rumbo!
+## Pizzería magrittr ¡La más %>% del rumbo!
 
 ```{r eval=F} 
 #Pizzería magrittr, de René Magritte e hijos. 
@@ -294,8 +369,8 @@ c(harina, agua, levadura) %>%
 
 El sabor es el mismo y si todo marcha bien jamás notaremos la diferencia. 
 
-Sin embargo el proceso es diferente. Si la pizza del asignador tiene problemas el pizzero deberá rastrear siete objetos para identificar en cuál está el problema. Quizás le quedó `masa_estirada` del día de ayer^[Esto es un muy frecuente: si repetimos los nombres de los objetos estos quedarán en nuestro entorno, cargados de datos. Luego, digamos, ajustamos un modelo sobre los datos con ese nombre a los que recodificamos para el caso. Si esta recoficación fallara por un error de sintaxis el modelo se ejecutará igual -pues sigue encontrando un objeto con ese nombre. Esto esproduce un error silencioso, que no advertiremos hasta el resultado final, si es que lo advertimos.], entonces no está seguro si la pizza que sale del horno tiene `masa_estirada` fresca o una que quedó de ayer.  
+Sin embargo el proceso es diferente. Si la pizza de "El asignador" tiene problemas el pizzero deberá rastrear siete objetos para identificar en cuál está el problema. Quizás le quedó `masa_estirada` del día de ayer^[Esto es un muy frecuente: si repetimos los nombres de los objetos estos quedarán en nuestro entorno, cargados de datos. Luego, digamos, ajustamos un modelo sobre los datos con ese nombre a los que recodificamos para el caso. Si esta recodificación fallara por un error de sintaxis el modelo se ejecutará igual -pues sigue encontrando un objeto con ese nombre. Esto produce un error silencioso, que no advertiremos hasta el resultado final, si es que lo advertimos.], entonces no está seguro si la pizza que sale del horno tiene `masa_estirada` fresca o una que quedó de ayer.  
 
-El pizzero funcional ni siquiera le da un nombre al objeto que está manipulando, sólo le interesa el proceso. Simplemente le pasa el resultado de ese proceso al cliente (¡otra función!) cuando este la requiere. Hace pizza cada vez que le piden, no tiene un inventario al que estar rastreando. Pero si no lee la receta con cuidado podría poner primero la salsa y después la masa, ya que la receta comienza con el resultado y no con las materias primas. Y no digamos nada del trabajo que le daría cambiar su receta para agregar queso a la pizza o ponerle salsa hasta las orillas a pedido de un cliente. A contar paréntesis y ubicar la línea exácta en la que pasar un argumento adicional a una función.  
+El pizzero funcional ni siquiera le da un nombre al objeto que está manipulando, sólo le interesa el proceso. Simplemente le pasa el resultado de ese proceso al cliente (¡otra función!) cuando este la requiere. Hace pizza cada vez que le piden, no tiene un inventario al que estar rastreando. Pero si no lee la receta con cuidado podría poner primero la salsa y después la masa, ya que la receta comienza con el resultado y no con las materias primas. Y no digamos nada del trabajo que le daría cambiar su receta para agregar queso a la pizza o ponerle salsa hasta las orillas a pedido de un cliente. A contar paréntesis y ubicar la línea exacta en la que pasar un argumento adicional a una función.  
 
 En Pizzería mgrittr empezamos por los ingredientes y terminamos con el horneado. Si queremos agregar un ingrediente o modificar un proceso simplemente lo ubicamos en el lugar obvio. El queso va después de salsear y antes de hornear. `cubrir_borde` es un argumento que pasamos a la función salsear, que identificamos inmediatamente en el código. La receta es legible de una forma intuitiva, comienza por las materias primas y termina en el horneado. Es fácil identificar cada paso y modificarlo de acuerdo a las necesidades del momento. 

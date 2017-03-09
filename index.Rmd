@@ -24,14 +24,17 @@ Mis caprichos:
 
 #Guías de  R.
 
-##[Aplicación del paradigma de programación funcional para el análisis de datos en R.](https://martinpaladino.github.io/programacion_funcional.html)
+##[Investigación reproducible con R](https://martinpaladino.github.io/programacion_funcional.html)
 
-**BORRADOR**
-
+- Investigación reproducible. 
+    - Definición. 
+    - Cadena de software libre para investigación reproducible. 
+    
 - Conceptos de la programación funcional aplicables a la investigación reproducible. 
     - Inmutabilidad de los datos. 
     - Transparencia referencial. 
     - Funciones puras. 
+- CODA
 
 ##[Manipulación de datos con dplyr](https://martinpaladino.github.io/manipulacion_de_datos_con_r_dplyr_y_tidyr.html)
 
