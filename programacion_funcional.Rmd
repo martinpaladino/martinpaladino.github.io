@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 El texto que está a punto de leer presentará algunos conceptos sumamente abstractos sobre las formas en que unas entidades abstractas -los programas- tratan a otras entidades abstractas -los datos. Propone una disciplina de trabajo aplicando un paradigma estricto y de comprensión no muy accesible, desarrollado en el ámbito de la cibernética, que lo retomó de las matemáticas. No en vano [Randall Munroe](https://xkcd.com/1270/) dice que la programación funcional combina la flexibilidad y el poder de las matemáticas abstractas con la claridad intuitiva de las matemáticas abstractas. La programación funcional se desarrolló para atender problemas de desarrollo de software altamente complejo, en los que se hacía imposible o muy costoso conocer el estado de un programa en un momento dado. ¿Por qué debería interesar esto a un científico social? Porque la programación funcional hace una contribución significativa a la investigación reproducible. Dicho de otro modo, la investigación reproducible hace de la redacción --incluyendo texto y código-- de un reporte, artículo, tesis o libro un problema de computación suficientemente complejo como para requerir soluciones igualmente complejas. Es claro que podemos que podemos hacer investigación reproducible sin recurrir a la programación funcional, pero a medida que aumenta la complejidad de nuestro producto --al que llamaremos y con razón *programa*, aunque se trate del más breve e insignificante paper--  controlar la ejecución de ese programa se torna difícil. Si alguna vez intentó generar un script extenso en el que analiza una o más bases de datos usando R y notó que a medida que avanzaba pasaba más tiempo corrigiendo el código anterior que escribiendo código sabe de lo que le hablo. Si alguna vez, después de recibir un dictamen, regresó a su código para hacer algunas correcciones y notó que la `base` en la línea 1 no es la misma `base` que en la línea 134 también lo sabe. 
 
-##Investigación reproducible. 
+#Investigación reproducible. 
 
 Uno de los temas actuales en la investigación académica, especialmente la que se apoya en métodos cuantitativos, pasa por la investigación reproducible. Uno de los fundamentos de la ciencia --sea cual sea el paradigma desde el que nos ubiquemos-- es su naturaleza pública, por eso publicamos resultados. Y hacemos públicos nuestros resultados porque buscamos que la comunidad académica los lea, critique, valide o refute. Para hacer ese proceso todavía más profundo la investigación reproducible nos llama a no solamente publicar los resultados, también los procesos que nos han llevado a ellos. De acuerdo con Rodríguez Sánchez, Pérez Luque, Bartomeu y Varela [@rodriguez-sanchez_ciencia_2016] los estudios científicos reproducibles son aquellos que incluyen el código informático capaz de recrear todos los resultados a partir de los datos originales, así como el texto creado por los o las autoras. De este modo otro investigador o investigadora podrá partir de los mismos datos y aplicar el mismo análisis, verificar los resultados, buscar posibles errores, retomar el análisis donde lo dejamos y continuar el trabajo. Si entendemos a la actividades científica como colectiva no es aceptable que el análisis propiamente dicho --no sólo los resultados-- nunca salga de Mis documentos.
 
@@ -77,10 +77,14 @@ fontname=Helvetica
 
 ```
 
+##Ventajas de la investigación reproducible. 
+
 ¿Qué ventajas tiene la investigación reproducible? La ventaja para la comunidad de investigadores ya fue expuesta. Para cada investigador o investigadora también las tiene. 
 La primera, también esbozada, es la *simplificación del flujo de trabajo* al utilizar  una solo plataforma de software. Es innecesario pasar por el penoso trabajo de realizar el análisis en un programa --digamos, Stata--, copiar los resultados, formatearlos en otro --digamos, Excel para las tablas y/o un editor de gráficos para estos-- y finalmente reunirlos en un documento de procesador de texto --digamos, Word; sólo para repetir la cadena cada vez que queremos introducir algún cambio, por mínimo que sea. Este proceso no solo es laborioso, también es propenso a errores y no deja rastros que nos permitan identificar con facilidad donde los cometimos: no hay una sintaxis o log del proceso, todo lo hicimos moviendo el ratón. Integrando todos los pasos en R los cambios, grandes o pequeños, se actualizan inmediatamente. Si hay error de sintaxis será ruidoso e interrumpirá el proceso, si hay un error conceptual o de otro tipo tendremos la sintaxis paso a paso de lo que hemos hecho y podremos identificarlo y solucionarlo. Podemos recorrer y validar el camino que nos lleva a nuestros resultados con gran facilidad. 
 La segunda es la aplicación de *control de versiones*. Uno de verdad, como el que implementa el algoritmo Git, no el control de cambios de Word, que nadie en su sano juicio utiliza y por buenos motivos. Para el investigador individual significa que podemos ir hacia atrás y hacia adelante en el avance del documento, comparar cambios, regresar si el camino que tomamos no nos gusta. Esto hace obsoletas tanto las versiones con múltiples nombres de un mismo archivo como los documentos que reservamos para párrafos sueltos. Para los equipos de trabajo que no es necesario pasar versión tras versión por correo electrónico: texto y código están en un repositorio compartido y permanentemente actualizado que, si se dieran conflictos de versiones, los resuelve automáticamente. También posibilita abrir bifurcaciones para probar ideas nuevas sin alterar el original. Al final y si lo consideramos mejor podemos reunirlo con el original. 
 La tercera es la posibilidad de *reutilizar nuestro propio trabajo*. No me refiero a hacer refritos para inflar el CV, me refiero a encontrarnos en el futuro con un problema que ya resolvimos y encontrar rápidamente esa solución para volver a implementarla. 
+
+##Desafíos de la investigación reproducible. 
 
 ¿Qué desafíos trae la investigación reproducible? El más inmediato es que posiblemente no estemos acostumbrados a utilizar las herramientas de software que lo implementan. No se trata de versiones diferentes de los paquetes de oficina o de análisis estadístico que usamos, se trata de software que emplea interfaces y metáforas totalmente diferentes. R, pandoc, LaTeX o Git no tienen ningún atisbo de isomorfismo, no intentan simular nuestras interacciones con objetos cotidianos para darnos una sensación de familiaridad o implementan menús para mostrarnos todas las opciones. Reciben sus comandos de manera escrita a través de una consola, misma en la que vemos los resultados, se manejan exclusivamente con archivos de texto que debemos editar con cuidado. Esta familia de software tiene una característica común: la curva de aprendizaje tiene pendiente alta al principio. R hace difícil lo fácil y fácil lo difícil, al menos en un comienzo.
 
@@ -116,11 +120,13 @@ tribble(~prog,  ~x, ~y,
 ```
 
 Llegado el punto en el que el manejo de R y en general de la cadena de software de investigación reproducible no son un problema aparecen otros. Esos problemas más avanzados son los que atenderemos en el resto del documento. Se trata de problemas conocidos a los que han buscado --y encontrado-- soluciones en el campo del desarrollo de software y lenguajes de programación. Entrar comandos en la consola de R es una cosa. Escribir un script con algunos comandos que, en conjunto, hacen algo más complejo, otra. Y escribir una tesis o un libro en el que haremos múltiples manipulaciones de datos, recodificaciones, transformaciones, gráficos y modelos otra muy diferente. Sin pudor o equivocados aires de superioridad podemos llamar a ese libro o esa tesis, producido en el marco de la investigación reproducible, un *programa*: código que cuando se ejecuta define estados de un sistema informático y cambia esos estados. Cada tipo de programa tiene sus dificultades, mayores o menores. Un programa de investigación reproducible --el código que produce el artículo, libro o tesis-- tiene como principal problema garantizar la integridad de los datos a lo largo del programa, es decir, evitar que sufran modificaciones que o rompen el código siguiente o, peor aún, producen errores silenciosos. Todos los programas comparten, eso sí, una misma dificultad: el mantenimiento o revisión del código. Ya sea que buscamos agregar una nueva característica a un sistema operativo o hacer correcciones a un artículo sin dudas volveremos sobre nuestro código y nos parecerá escrito por un completo desconocido  ¿en qué linea cambia `datos_reco_2`? ¿Contiene la recodificación de la variable x o esa está en `datos_reco_3`. Integridad de los datos y mantenibilidad del código son dos problemas con una solución: programación funcional. No es la manera obvia y difícilmente sea la que aplicamos cuando estamos aprendiendo a usar R. Dado que R es multiparadigma admite tanto programación imperativa o procedimental como programación funcional. La metáfora de tiempo espacio implícita en el script nos lleva sutilmente al paradigma imperativo: ¡R! haz esto y guárdalo aquí, léelo, luego haz esto y guárdalo allí, lee allí y luego haz esto. Una instrucción y una asignación por cada línea de código. 
-El paradigma funcional procura, en cambio, no asignar nombres en el entorno de trabajo en la medida de lo posible y encadenar funciones: pasar el output de una como input de la otra sin asignarles un nombre al input ni al output. Puede parecer innecesariamente complejo, pero a medida que a medida que la complejidad de nuestro programa aumenta en realidad simplifica las cosas. En el paradigma imperativo debemos controlar las transformaciones de los datos a lo largo de todo el programa, en el funcional solamente dentro de la cadena de funciones que produce el resultado que estamos esperando. Bien implementado el paradigma funcional   
+El paradigma funcional procura, en cambio, no asignar nombres en el entorno de trabajo en la medida de lo posible y encadenar funciones: pasar el output de una como input de la otra sin asignarles un nombre al input ni al output. Puede parecer innecesariamente complejo, pero a medida que a medida que la complejidad de nuestro programa aumenta en realidad simplifica las cosas. En el paradigma procedimental debemos controlar las transformaciones de los datos a lo largo de todo el programa, en el funcional solamente dentro de la cadena de funciones que produce el resultado que estamos esperando. Bien implementado el paradigma funcional puede tiene la misma potencia expresiva que el procedimental, es decir, podemos hacer las mismas operaciones. Se trata de enfocar de manera distinta el desarrollo del código. 
+
+El siguiente ejemplo ilustra dos maneras de resolver el mismo problema. Buscamos un gráfico que en el eje x tenga una variable categórica con las 5 primeras letras del alfabeto y en el eje y números aleatorios consistentes con una distribución normal con $\hat{x}=0$ y $\sigma=3$. Ese es nuestro output, cualquier cambio de estado del programa --producido, por ejemplo, por pasos intermedios- es un efecto colateral. Hemos agregado un valor missing para hacer aumentar levemente la complejidad del problema y demostrar la forma en que puede solucionarse con programación funcional.  
 
 ```{r imperativo_funcional}
 
-#Programación imperatica en R: cada línea modifica el estado anterior del programa y asigna un nombre al cambio. 
+#Programación procedimental en R: cada línea modifica el estado anterior del programa. 
 set.seed(1244)
 x <- c("a", "b", "c", "d", NA)   #Creo el vector x
 y <- rnorm(5, 0, 3)              #Creo el vector y: una normal aleatoria.
@@ -128,26 +134,16 @@ df <- data.frame (x=x, y=y)      #Los reuno en un data.frame
 df <- na.omit(df)                #Elimino las filas con missing (NA)
 plot(df)                        #Produzco un gráfico. 
 
-#Entorno de trabajo imperativo: 3 efectos colaterales, un output.
-ls()
-rm(list=ls())                 #Borro el entorno de trabajo. 
+#Entorno de trabajo en R con paradigma procedimental: 3 efectos colaterales, un output.
+ls()                          #Muestra el entorno de trabajo en consola.
 
+rm(list=ls())                 #Borro el entorno de trabajo completo.
 
 plot(na.omit(data.frame(x=c("a", "b", "c", "d", NA), y=rnorm(5, 0, 3))))  #Sólo output, 0 efectos colaterales.
 
-#Entorno de trabajo funcional. Nada por aquí... producimos output
+#Entorno de trabajo funcional. Nada por aquí... sólo producimos output, cero efectos colaterales.
 ls()
 
-#Versión legible con sangrado de código. R lo evalúa como una sola línea. 
-
-plot(
-   na.omit(
-     data.frame(
-                x=c("a", "b", "c", "d", NA), 
-                y=rnorm(5, 0, 3)
-                )
-          )
-     )
 ```
 
 En lugar de ir transformando nuestros datos a lo largo del programa y registrando esos cambios asignándoles uno o más nombres crearemos los datos que necesitamos de manera ad hoc, en una cadena que inicia con los datos y culmina con el resultado esperado: una tabla, un gráfico, un modelo. Los datos no son un río que fluye y cambia de forma a medida avanza el programa: son un depósito del que sacamos una tubería cada vez que lo necesitamos. Si una se tapa las demás siguen funcionando. Seguiremos organizando nuestro código con una pauta de tiempo espacio: esto es investigación reproducible y los resultados de R deben estar en sincronizados con el texto que estamos escribiendo, que tiene su propia metáfora tiempo-espacio: más arriba es antes, más abajo después. Pero a los efectos ejecución del programa este es paralelo: hay una fuente inmutable de datos y múltiples funciones que pueden procesarlos simultáneamente^[No es extraño que la programación funcional sea utilizada en aplicaciones que requieren procesamiento paralelo aprovechando los múltiples núcleos de procesamiento de las computadoras. Lamentablemente R, en su versión actual, tiene pocas capacidades para aprovechar el paralelismo implícito en el paradigma funcional. Ojalá esto cambie. Si escribimos código funcional podremos aprovechar ese paralelismo.]. Cada bloque está separado de los demás, no depende se sus resultados. Puedo eliminar bloques completos de código y el resto sigue funcionando. La integridad de los datos y el mantenimiento del código están garantizados.  
@@ -323,8 +319,7 @@ Como vemos en el Bloque 1 R se maneja tanto dentro de un paradigma procedimental
   - El único efecto colateral de la programación funcional es que tendrá que contar paréntesis. Si se toma el trabajo adicional de alinearlos será más fácil ubicar cuál abre y cual cierra cada función. 
 - Al finalizar su análisis su entorno de trabajo debería tener solamente la o las fuentes de datos originales y las funciones con las que las transforma, nunca 15 o 20 versiones levemente diferentes y con nombres parecidos de los mismos datos. 
 
-#Paradigmas de programación en R. 
-¡Hagamos pizza con R!
+#Hagamos pizza en R. 
 
 ##Pizzería "El asignador". Pizzas de hoy y de ayer.
 
@@ -339,7 +334,7 @@ prepizza <- salsear (masa_estirada, salsa)
 pizza <- hornear (prepizza)
 ```
 
-##Pizzería La funcional clásica.
+##Pizzería La funcional clásica. El cambio se lo da en paréntesis. 
 
 ```{r eval=F}
 #Pizzero La funcional
