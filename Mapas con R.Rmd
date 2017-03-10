@@ -399,9 +399,11 @@ library(plotKML)
 #Grafico con etiquetas. 
 
 #Posibles mejoras de código: 
-#estudiar mutate lag() y encontrar una solución más elegante al problema de la suma acumulada. Básicamente el problema del NA al pcipio
+
+#estudiar mutate lag() y encontrar una solución más elegante al problema de la suma acumulada. Básicamente el problema del NA al pcipio. 
+#^Solución^: primeto acumulado, después lag()!!  
+
 #Un mejor sistema para seleccionar una fila cada 50 (o arbitrario)
-#Una importación de mapas mejor que la de google maps.
 #Encontrar un algoritmo para identificar paradas en semáforos. 
 
 
@@ -423,14 +425,69 @@ readGPX("19_feb._2017_10_54_56.gpx")$tracks[[1]][[1]][] %>% #Porque son 3 listas
                            NA)                                          #El resto a NA
                   ) -> ruta 
 
-#Cargamos el mapa desde GoogleMaps. 
-ggmap(get_map (location=c(mean(ruta$lon), mean(ruta$lat)), source="google", maptype="roadmap", zoom=12)) +
-  geom_point(data=ruta, aes(x=lon, y=lat), size=.5) +  
-  geom_label_repel(data=ruta, aes(x=lon, y=lat, label=etiquetas))
+#Cargamos el mapa desde stamen. 
+ggmap(get_map 
+      (location=c(
+                  min(ruta$lon), #Izquierda, mínimo valor de longitud en la ruta.   
+                  min(ruta$lat), #Abajo       
+                  max(ruta$lon), #Derecha    
+                  max(ruta$lat)  #Arriba     
+                  ), 
+        source="stamen",         #Fuente
+        maptype="toner")) +      #Tipo. tb: "terrain", "watercolor", terrain-background", etc. 
+  geom_point(data=ruta, 
+             aes(x=lon, y=lat), 
+             size=.5, 
+             color="red") +  
+  geom_label_repel(data=ruta, 
+                   aes(x=lon, 
+                       y=lat, 
+                       label=etiquetas))
+```
+
+##Mapas para la web con `leaflet::`.
+
+`leafleet::` es una librería que incluye una interface para R de la librería JavaScript del mismo nombre. Tienen una sintaxis muy simplificada y es especialmente útil para agregar capas --ya sean puntos o polígonos-- a la base de un mapa raster. Podemos usar capas raster de varios proveedores, pero el más recomendable es stamen. Los mapas de stamen se distribuyen bajo la licencia Creative Commons, el equivalente a la licencia GNU/GPL para propiedad intelectual. Si esto no fuera suficiente tienen más opciones y son mucho más elegantes que los mapas mapas de GoogleMaps. 
+
+Para contruir un mapa con con `leaflet::` encadenamos las funciones con el operador `%>%`de `magrtittr::`, el mismo que usamos con `dplyr::`. Es decir, vamos encadenando paso a paso y agregando capas. Es importante conocer algunas convenciones de de la librería. 
+
+- Latitud y longitud son `lat` y `lng` respectivamente. Es buena idea renombrar la columnas del data.frame que le pasemos con esos nombres, para que los reconozca automáticamente. 
+    - Utiliza coordenadas geográficas con notación decimal, no hexadecial. Latitud sur y longitud oeste se señalan con un signo menos. 
+- Podemos capturar un punto geográfico cargándolo directamente en la sintaxis. Para muchos puntos le pasamos un data.frame correctamente formateado.^[a large, properly formatted data file] 
+- Sólo recibe data.frame como input. Si importamos polígonos desde un shapefile y tenemos un objeto de la clase SPDF es necesario pasarlo por `fortify()` y convertirlo a data.frame. 
+- Si bien es posible exportar los mapas resultantes desde Rstudio no es una buena idea hacer mapas con esta librería para materiales con destino de impresión. No es compatible con documentos que pasarán por `knitr::` para convertirse en .pdf. 
+
+Las principales funciones de `leaflet::` son: 
+
+Función               | Uso                       | Sintaxis
+----------------------|---------------------------|----------------------
+leaflet()             | Abre la llamada           |leaflet(datos)
+addMarkers            | Ubica marcadores          |addMarkers (lng=-99.152491, lat=19.3887)
+addTiles              | Agrega una capa rastrer   |addTiles ()
+addProviderTiles      | Agrega capa raster de un proveedor |addProviderTiles(providers$Stamen.Toner)
+addPolygon            | Agrega polígonos desde un objeto SPDF | addPolygon ()
+addCircle             | Agrega círculos por lng y lat | addCircles(ruta)
+
+```{r}
+library(leaflet)
+
+#Mapa simple con leaflet
+#=======================
 
 
-#Mala opción, googlemaps no permite especificar el rectángulo, sólo un un centro y el nivel de zoom. stamen y osm sí, pero el servidor de osm funciona mal y stamen está roto para ggmaps (regresa un .png y get_map espera un .jpg).
+readOGR(".", "df_municipal") %>%    #Leo un shapefile con polígonos de las delegación de CDMX
+      leaflet() %>%                 #Hereda los polígonos desde el lado izquierdo de %>% 
+      addPolygons(weight=1,                   #Grosor de línea
+                  opacity=0.3,                #Opacidad
+                  fillColor = "yellow") %>%   #Mapeable a variable= coropléticos
+      addProviderTiles(providers$Stamen.Toner) %>% #Agrega un fondo raster de stamen.
+      addCircles(lng=ruta$lon, 
+                 lat=ruta$lat,      #Agrego puntos. Especifico la ubicación de los vectores de coordenadas. 
+                 color="red",       #Color (mapeable a una variable)
+                 radius=1,          #Radio (Mapeable a una  variable)
+                 weight=1)          #Grosor de línea
 
+#Mejoras: Mapeados a variables. Supongo que con un join previo. 
 ```
 
 
