@@ -34,6 +34,7 @@ Si estamos usando `ggplot2::` para el resto de los gráficos de nuestro trabajo 
 ```{r, echo=FALSE}
 library(tidyverse)
 library(knitr)
+library(lubridate)
 tribble(~Tema,                 ~Métodos                            , ~`Librería y función`,
         "Importación de datos", "Desde shapefiles .shp"            ,"`rgdal::readOGR()`", 
         ""                    , "Raster desde la API de GoogleMaps","`ggmap::get_map()`", 
@@ -388,7 +389,7 @@ Para esto último usamos la función `readGPX()` del paquete plotKML. El formato
 
 El objetivo es generar un mapa raster de la zona CDMX en la que está registrada una ruta y etiquetar algunos de los puntos con el tiempo acumulado desde la partida a la llegada. Lo primero es muy fácil, lo segundo no tanto, pues el manejo de horas y fechas no es fácil en R. 
 
-```{r, fig.height=8, fig.width=8}
+```{r, fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
 library(plotKML)
 # Gráfico con inmutabilidad de datos. 
 #====================================
@@ -401,37 +402,27 @@ library(plotKML)
 #Posibles mejoras de código: 
 
 #estudiar mutate lag() y encontrar una solución más elegante al problema de la suma acumulada. Básicamente el problema del NA al pcipio. 
-#^Solución^: primeto acumulado, después lag()!!  
+#^Solución^: na.omit()
 
 #Un mejor sistema para seleccionar una fila cada 50 (o arbitrario)
 #Encontrar un algoritmo para identificar paradas en semáforos. 
 
 
-readGPX("19_feb._2017_10_54_56.gpx")$tracks[[1]][[1]][] %>% #Porque son 3 listas anidadas.
-  mutate(
-    time=as.POSIXct(                            #Porque mutate no acepta POSIXlt
-      strptime(time,                            #Regresa POSIXlt
-               format = "%Y-%m-%dT%H:%M:%OS")   #timestamp de gpx
-               )
-         ) %>% 
-  mutate(acum=round(         
-           cumsum(c(0,       #diff regresa length-1 y mutate() no acepta largos diferentes.  
-             diff(time)      #Diferencia en x y x[-1]
-                   )
-                 )/60)) %>%  #Paso directo a minutos. 
-           mutate(etiquetas=
-                    ifelse(row_number(acum) %in%  seq(1,nrow(.), 50), #Selecciono 1 cada 30 filas. 
-                           acum, 
-                           NA)                                          #El resto a NA
-                  ) -> ruta 
+readGPX("19_feb._2017_10_54_56.gpx")$tracks[[1]][[1]][]  %>% #Porque son 3 listas anidadas.
+  mutate(time=ymd_hms(time)) %>%                             #A POSIXct
+  mutate(dif=(time-lag(time))) %>%                           #Diferencia
+  na.omit() %>%                                              #Retiro el NA de 1er fila
+  mutate(acum=cumsum(as.duration(dif))) %>%                  #as.duration()
+    mutate(etiquetas=
+           ifelse(row_number(acum) %in%  seq(1,nrow(.), 35), round(acum/60), NA)) ->ruta
 
 #Cargamos el mapa desde stamen. 
 ggmap(get_map 
       (location=c(
-                  min(ruta$lon), #Izquierda, mínimo valor de longitud en la ruta.   
-                  min(ruta$lat), #Abajo       
-                  max(ruta$lon), #Derecha    
-                  max(ruta$lat)  #Arriba     
+                  min(ruta$lon)-0.01, #Izquierda, mínimo valor de longitud en la ruta.   
+                  min(ruta$lat)-0.01, #Abajo       
+                  max(ruta$lon)+0.01, #Derecha    
+                  max(ruta$lat)+0.01  #Arriba     
                   ), 
         source="stamen",         #Fuente
         maptype="toner")) +      #Tipo. tb: "terrain", "watercolor", terrain-background", etc. 
@@ -566,4 +557,5 @@ library(ggmap)     #Para importar rasters y producir mapas.
 library(plotKML)   #Levanta muchísimas dependencias en la instalación.
 library(mxmaps)    #devtools::install_github('diegovalle/mxmaps')
 library(tidyverse)
+library(lubridate)
 ```

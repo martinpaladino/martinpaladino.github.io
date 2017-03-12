@@ -8,7 +8,7 @@ output:
     theme: united
 ---
 
-Esta es la página que acompaña al repositorio Rguias2. Incluye las salidas en .html de las guías de manejo de datos, gráficos y modelado en R.  
+Esta es la página que acompaña al repositorio homónimo. Incluye las salidas en .html de las guías de manejo de datos, gráficos y modelado en R.  
 Cuando aprenda a usar Jekyll esto será un blog, por ahora es web 1.0. Si quiere hacer algún comentario debe tener una cuenta de GitHub y abrir un issue o pull request en directamente en el [repositorio](https://github.com/martinpaladino/martinpaladino.github.io).  
 El diseño es austero para acompañar a la época.^[Al diseñador le indexaron el pago en UMA "para recuperar el espíritu original y la verdadera función social del salario mínimo."]
 
