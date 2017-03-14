@@ -1,0 +1,364 @@
+---
+title: "Preferencias musicales en Lima y CDMX"
+author: "Martín Paladino (mpaladino@mora.edu.mx)"
+date: "14 de marzo de 2017"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r librerias_y_funciones, message=FALSE, warning=FALSE, include=FALSE}
+#Librerías========================
+
+library(tidyverse)
+library(lcca)
+library(knitr)
+library(ggtern)
+library(magrittr)
+library(poLCA)
+library(lcca)
+library(forcats)
+library(DiagrammeR)
+
+#Funciones=====
+#Imprime un kable con %T>% 
+printk <- function(.) { print(kable(.))}
+
+#Arregla nombres de la base. 
+arreglar_nombres <- function(.) {rename(.,PrefMuscRock=PrefMusRock, PrefMuscMetal=PrefMusMetal, PrefMuscPop=PrefMusiPop, PrefMuscElectr=PrefMusiElectr)}
+
+#Nombres cortos. Pasar después de select()
+nombrar_corto <- function (.) {rename(., Rock=PrefMuscRock,  Metal=PrefMuscMetal, Pop=PrefMuscPop,   `Electrónica`=PrefMuscElectr, Tradicional=PrefMuscTradic, Cumbia=PrefMuscCumb,Salsa  =PrefMuscSalsa, Regaetton =PrefMuscRegu, Trova =PrefMuscTrova, `Culta o de concierto`=PrefMuscCulta, `Romántica`=PrefMuscRoman)}
+
+
+#Compara modelos LCA desde 1 hasta k clases. Requiere poLCA::
+
+comparar_clases_lca <- function(datos, k, formula) {
+  entropy<-function (p) sum(-p*log(p)) #Función para estimar entropía relativa. 
+    tabla_LCA <- data.frame(Modelo=0, BIC=0, Lik_ratio=0, Entropia=0, MenorClase=0) #data.frame vacío. 
+  for(i in 1:k){
+    lc <- poLCA(formula, datos, nclass=i, maxiter=1000, 
+                tol=1e-5, na.rm=FALSE,  
+                nrep=8, verbose=F, calc.se=TRUE)
+    tabla_LCA [i,1] <- paste("Modelo", i)
+    tabla_LCA [i,2] <- lc$bic
+    tabla_LCA [i,3] <- lc$Gsq
+    error_prior<-entropy(lc$P)
+    error_post<-mean(apply(lc$posterior,1, entropy),na.rm = TRUE)
+    tabla_LCA [i,4]<-round(((error_prior-error_post) / error_prior),3)
+    tabla_LCA [i,5] <- min(lc$P)*100
+  }
+  return(tabla_LCA)
+}
+
+#Grafico de codo para la comparación de modelos LCA. 
+
+graficar_comparaciones <- function(tabla_comparativa, titulo="Poneme título") {
+  tabla.LCA2<-reshape2::melt(tabla_comparativa) 
+  p <- ggplot(tabla.LCA2) +
+    geom_point(aes(x=Modelo,y=value),size=3) +
+    geom_line(aes(Modelo, value, group = 1)) +
+    theme_bw()+
+    labs(x = "", y="", title = "") + 
+    facet_grid(variable ~. ,scales = "free") 
+  print (p + labs(title=titulo)) 
+}
+
+#Graficar probabilidades de item-respuesta (rho). 
+
+graficar_rho <- function(modelo_LCA, filtro, titulo="Poneme título") {
+  lcmodel <- reshape2::melt (LCA_Lima$probs)
+  p <- ggplot (data=dplyr::filter(lcmodel, Var2==filtro), aes(x=fct_reorder(L1, value))) + 
+    geom_point (aes(y=value, group=Var1, shape=Var1), size=3) + 
+    geom_line (aes(y=value, group=Var1, color=Var1), size=1) + 
+    labs (x="Variable", y = "Probabilidad") + 
+    theme_minimal () + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))   
+  print(p + labs(title=titulo)) 
+}
+
+#Graficar tamaños de clase por modelo. 
+
+graficar_gamma <- function(modelo_LCA) {
+  pm <- tidyr::gather(data.frame(Clase=paste("Clase", 1:length(modelo_LCA$P)), 
+                                 Estimada=modelo_LCA$P*100, 
+                                 Imputada=as.vector(prop.table(table(modelo_LCA$predclass))*100)), 
+                      variable, valor, -Clase)
+  ggplot(pm, aes(x=Clase, y=valor, fill=variable)) + 
+    geom_col(position = "dodge") + 
+    labs(title="Proporción de pertenencia a clase", 
+         y="Porcentaje", 
+         color="Método")
+}
+
+#1. Carga de datos========================
+load("C:/Users/mpaladino/Dropbox/Ibero/BaseConjunta.Rda")
+```
+
+#Proyecto | Consumo cultural y representaciones sociales en niños, adolescentes y jóvenes de la ciudad de México. Diagnóstico y propuestas para la construcción de políticas públicas en materia de desarrollo social y cultural para este sector
+
+##Pregunta: ¿como se estructuran las preferencias por géneros musicales en CDMX y Lima?
+
+### ¿Tienen entre sí el mismo patrón de asociación?
+### ¿Están relacionadas con los mismos atributos sociodemográficos?
+
+##Problemas teóricos.
+- Caracter relacional de los espacios de las prácticas.
+    - cumbia_cdmx $\neq$ cumbia_lima
+    - Podemos rastrear la equivalencia funcional de las prácticas, pero es necesario mucho conocimiento sustantivo.
+    
+##Problemas metodológicos. 
+- Diferencias --sutiles-- en los cuestionarios y la forma en que se administraron. 
+- Diferencias en la codificación. 
+- Diferencias estructurales en la medición de algunas variables. 
+    - NSE, Educación.
+- Preferencias $\neq$ prácticas. 
+    
+#Metodología. 
+
+##Análisis de Clases Latentes. 
+
+- En lugar del Análisis de Correspondencias Múltiples exploramos el set de datos con Análisis de Clases de Latentes. 
+- El ACL pertenece a la familia de los modelos modelos de mezcla finita. 
+    - Es un caso especial de los modelos de ecuaciones estructurales.
+- Infiere una variable categórica latente a partir de variables categóricas observadas. 
+- Esa variable latente explica a las observadas. 
+    - Por ejemplo, el gusto musical --latente-- explica que alguien prefiera el rock o la cumbia. 
+
+## ACM vs. ACL
+Ambos son métodos multivariados que operan sobre variables categóricas. 
+
+1. Infiere una variable latente categórica con *k* categorías, no múltiples dimensiones contínuas. 
+2. Da cuenta del error de estimación. Se pueden calcular intervalos de confianza. 
+3. Versus ACM-cluster ofrece criterios para la selección del número óptimo de grupos (BIC, AIC)
+4. Se pueden aplicar modelos lineales para analizar la covarianza de la variable latente con variables observadas. 
+    - vs. variables suplementarias. 
+    
+##Modelo de clases latentes. 
+
+```{r, fig.height=6, fig.width=8}
+grViz("digraph boxes_and_circles {
+  graph [overlap = true, fontsize = 10]
+node [shape = box, fontname = Helvetica]
+  
+  B[label='Rock']
+  C[label='Metal']
+  D[label='Trova']
+  E[label='Romántica']
+  F[label='Tradicional']
+  G[label='Culta']
+  H[label='Reggaeton']
+  I[label='Salsa']
+  J[label='Cumbia']
+  K[label='Electrónica']
+  L[label='Pop']
+  M[label='Edad']
+  N[label='Sexo']
+  O[label='Idioma Extranjero']
+
+node [shape=circle]
+  A[label='Gusto']
+
+A->{B, C, D, E, F, G, H, I, J, K L}
+
+M->A
+N->A
+O->A
+}")
+```
+
+#Exploración de los datos
+
+## 
+
+```{r grafico1, fig.height=5.5, fig.width=8}
+df %>% 
+  arreglar_nombres() %>% 
+  dplyr::select(contains("PrefMusc"), Ciudad) %>% 
+  nombrar_corto() %>% 
+  gather(variable, valor, -Ciudad) %>% 
+  group_by(Ciudad, variable, valor) %>% 
+  tally() %>% 
+  spread(valor, n) %>% 
+  mutate_each (funs(No/sum(No, `Sí`)*100), No) %>% 
+  mutate_each((funs(100-No)), `Sí`) %>% 
+  gather(., respuesta, proporcion, -Ciudad, -variable) %>% 
+  ggplot(aes(y=proporcion, x=respuesta, fill=Ciudad)) + 
+  facet_wrap(~variable) + 
+  geom_col(position = "dodge") + 
+  labs (title="Preferencias musicales en CDMX y Lima",
+        caption="n de Lima = 672, n de CDMX=1082", 
+        y="% de respuestas")
+```
+
+##
+
+```{r grafico2, fig.height=5.5, fig.width=8}
+df %>% 
+  arreglar_nombres() %>% 
+  dplyr::select(contains("PrefMusc"), Ciudad) %>% 
+  group_by(Ciudad) %>% 
+  mutate_each(funs(as.integer(.)-1)) %>% 
+  rowwise() %>% 
+  mutate(alguno=sum(PrefMuscTradic, PrefMuscCumb, PrefMuscSalsa, PrefMuscRegu, PrefMuscTrova, PrefMuscCulta, PrefMuscRoman, PrefMuscRock, PrefMuscMetal, PrefMuscPop, PrefMuscElectr)) %>% 
+  ungroup() %>% 
+  group_by(Ciudad, alguno) %>% 
+  tally() %>% 
+  group_by(Ciudad) %>% 
+  mutate(total=sum(n)) %>% 
+  spread(alguno, n) %>% 
+  dplyr::select(3:8, total, Ciudad) %>%
+  mutate_each(funs(./total*100)) %>% 
+  dplyr::select(-total) %>%  
+  gather(preferencias, porcentaje, -Ciudad) %>% 
+  ggplot(aes(x=preferencias, y=porcentaje, group=Ciudad, color=Ciudad)) +
+  geom_line() + 
+  labs(x="Preferencias manifestadas", 
+       y="Porcentaje", 
+       title="Gusto Musical en Lima y México", 
+       subtitle="En Lima el número de inactivos es más bajo") + 
+  annotate("label", x=1, y=38, label="Moda CDMX 36.4%") +
+  annotate("label", x=4, y=31, label="Moda Lima 29.3%") +
+  theme_minimal()
+```
+
+##
+-¿Qué hacer con la clase 3 de México?
+
+```{r, fig.height=6, fig.width=8}
+
+formula <- cbind(Rock, Metal, Pop, Electrónica, Tradicional, Cumbia, Salsa, Regaetton, Trova, `Culta o de concierto`, Romántica)~1
+
+inicio_lima <- 
+  list(structure(c(0.478568900511043, 0.495768347873635, 0.485575281787301, 
+  0.521431099488957, 0.504231652126365, 0.514424718212699), .Dim = c(3L, 
+  2L)), structure(c(0.848566729126685, 0.391311387211055, 0.376069285540123, 
+  0.151433270873315, 0.608688612788945, 0.623930714459877), .Dim = c(3L, 
+  2L)), structure(c(0.669189763874842, 0.640655720685827, 0.448418979947021, 
+  0.330810236125158, 0.359344279314173, 0.551581020052979), .Dim = c(3L, 
+  2L)), structure(c(0.725853750252302, 0.483187787558295, 0.743976763228298, 
+  0.274146249747698, 0.516812212441705, 0.256023236771702), .Dim = c(3L, 
+  2L)), structure(c(0.410900257671, 0.914855516724894, 0.4740647724881, 
+  0.589099742329, 0.0851444832751065, 0.5259352275119), .Dim = c(3L, 
+  2L)), structure(c(0.46106227678295, 0.00891613729081595, 0.711904065547185, 
+  0.53893772321705, 0.991083862709184, 0.288095934452815), .Dim = c(3L, 
+  2L)), structure(c(0.59627491224112, 0.518378584930808, 0.478801320482243, 
+  0.40372508775888, 0.481621415069192, 0.521198679517757), .Dim = c(3L, 
+  2L)), structure(c(0.481148504875452, 0.303780620719489, 0.120828225623415, 
+  0.518851495124548, 0.696219379280511, 0.879171774376585), .Dim = c(3L, 
+  2L)), structure(c(0.117958121851105, 0.815172526064836, 0.251125537494827, 
+  0.882041878148895, 0.184827473935164, 0.748874462505173), .Dim = c(3L, 
+  2L)), structure(c(0.357423094105417, 0.52921942043129, 0.667520159712911, 
+  0.642576905894583, 0.47078057956871, 0.332479840287089), .Dim = c(3L, 
+  2L)), structure(c(0.822302613152374, 0.144782200791631, 0.280415069136613, 
+  0.177697386847626, 0.855217799208369, 0.719584930863387), .Dim = c(3L, 
+  2L)))
+
+inicio_mexico <- 
+  list(structure(c(0.504662206982986, 0.505668289783638, 0.480068138315777, 
+  0.495337793017014, 0.494331710216362, 0.519931861684223), .Dim = c(3L, 
+  2L)), structure(c(0.259162007195087, 0.371344099672569, 0.28084035265571, 
+  0.740837992804913, 0.628655900327431, 0.71915964734429), .Dim = c(3L, 
+  2L)), structure(c(0.206761327454917, 0.00899296959649754, 0.910143860050866, 
+  0.793238672545083, 0.991007030403502, 0.0898561399491336), .Dim = c(3L, 
+  2L)), structure(c(0.300175720781462, 0.127674966581199, 0.31821581918763, 
+  0.699824279218538, 0.872325033418801, 0.68178418081237), .Dim = c(3L, 
+  2L)), structure(c(0.900779929869195, 0.517987142586589, 0.519149629592455, 
+  0.0992200701308047, 0.482012857413411, 0.480850370407545), .Dim = c(3L, 
+  2L)), structure(c(0.886552421503826, 0.45374293891029, 0.570911056821979, 
+  0.113447578496174, 0.54625706108971, 0.429088943178021), .Dim = c(3L, 
+  2L)), structure(c(0.626502912810871, 0.782493688148624, 0.978878670395267, 
+  0.373497087189129, 0.217506311851376, 0.0211213296047332), .Dim = c(3L, 
+  2L)), structure(c(0.4353850927261, 0.943987542123722, 0.387834353720178, 
+  0.5646149072739, 0.0560124578762777, 0.612165646279822), .Dim = c(3L, 
+  2L)), structure(c(0.379779263967423, 0.359404856879471, 0.718309450739187, 
+  0.620220736032577, 0.640595143120529, 0.281690549260814), .Dim = c(3L, 
+  2L)), structure(c(0.590688306310178, 0.58503890395946, 0.382643716352036, 
+  0.409311693689822, 0.41496109604054, 0.617356283647964), .Dim = c(3L, 
+  2L)), structure(c(0.583651129905049, 0.0412712409807281, 0.709760342471337, 
+  0.416348870094951, 0.958728759019272, 0.290239657528663), .Dim = c(3L, 
+  2L)))
+
+df %>% 
+  arreglar_nombres() %>% 
+  dplyr::select(contains("PrefMusc"), Ciudad) %>% 
+  nombrar_corto() %>% 
+  filter(Ciudad=="Lima") %>% 
+  poLCA(formula=formula, data=., nclass=3, maxiter=1000, tol=1e-5, na.rm=FALSE, nrep=8, verbose=F, calc.se=TRUE, probs.star=inicio_lima) ->LCA_Lima
+
+df %>% 
+  arreglar_nombres() %>% 
+  dplyr::select(contains("PrefMusc"), Ciudad) %>% 
+  nombrar_corto() %>% 
+  filter(Ciudad=="Mexico") %>% 
+  poLCA(formula=formula, data=., nclass=3, maxiter=1000, tol=1e-5, na.rm=FALSE, nrep=8, verbose=F, calc.se=TRUE, probs.start=inicio_mexico) ->LCA_Mexico  
+
+ggplot (data=
+          dplyr::filter(
+            rbind(data.frame(reshape2::melt (LCA_Lima$probs), Ciudad="Lima"), data.frame(reshape2::melt (LCA_Mexico$probs), Ciudad="CDMX")), 
+            Var2=="Sí"), 
+        aes(x=fct_reorder(L1, value))) + 
+    geom_point (aes(y=value, group=Var1, shape=Var1), size=3) + 
+    geom_line (aes(y=value, group=Var1, color=Var1), size=1) + 
+    facet_grid (Ciudad~.) +
+    labs (x="Variable", y = "Probabilidad") + 
+    theme_minimal () + 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="Probabilidad de Ítem Respuesta por clase y Ciudad")
+```
+
+
+##Pagina dedicada los programadores de `lcca::` que usan `cat()` para pasar adevertencias. 
+
+```{r lca_conjunto_covariadas, message=TRUE, warning=TRUE}
+formula <- cbind(Rock, Metal, Pop, Electrónica, Tradicional, Cumbia, Salsa, Regaetton, Trova, `Culta o de concierto`, Romántica)~Edad+Sexo+Idioma
+
+#Modelo con 3 covariadas. 
+
+df %>% 
+  arreglar_nombres() %>% 
+  dplyr::select(contains("PrefMusc"), Ciudad, Sexo, Idioma, Edad) %>% 
+  mutate_at(vars(-Ciudad, - Sexo, - Idioma, - Edad), funs(as.integer)) %>%           #Pq viene una suma.
+  mutate(total=rowSums(.[1:11]-1)) %>%                     #Excluyo Ciudad
+  filter(total>=1) %>%                                     #Elimina inactivo
+  dplyr::select(-total) %>% 
+  mutate_at(vars(-Edad),funs(recode(., `1`="No", `2`="Sí"))) %>%     #Regreso a string
+  mutate_at(vars(-Edad), funs(as.factor)) %>% nombrar_corto() %>% 
+  lcacov(formula=formula, data=., nclass=3, groups=Ciudad, flatten.rhos=1) -> LCA_cov_conjunto
+```
+
+##
+```{r fig.height=8, fig.width=10}
+LCA_cov_conjunto$param$rho %>% reshape2::melt() %>% 
+  filter(Var2==2) %>% spread(Var3, value) %>% 
+  ggplot(aes(x=`Class 1`, y=`Class 2`, z= `Class 3` , label=Var1)) + 
+  facet_wrap(~Var4, ncol=2) + 
+  geom_text(vjust=-0.3, size=4) + 
+    geom_point() + 
+  coord_tern() + 
+  theme_hidemask() + 
+  labs(title="Probabilidades Item-respuesta")
+``` 
+
+##
+```{r covariadas}
+summary(LCA_cov_conjunto)$alpha.table %>% 
+  reshape2::melt() %>%
+  filter(Var3!="Class 1/1" & Var4=="Lima") %>% 
+  spread(Var2, value) %>% 
+  arrange(Var3, Var4) %>% 
+  kable()
+``` 
+
+##
+
+```{r covariadas2}
+summary(LCA_cov_conjunto)$alpha.table %>% 
+  reshape2::melt() %>%
+  filter(Var3!="Class 1/1" & Var4=="Mexico") %>% 
+  spread(Var2, value) %>% 
+  arrange(Var3, Var4) %>% 
+  kable()
+``` 
