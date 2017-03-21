@@ -1,0 +1,237 @@
+---
+title: "Análisis de datos categóricos con R"
+author: 
+- Martín Paladino^[mpaladino@mora.edu.mx]
+date: "15 de marzo de 2017"
+output: 
+  html_document: 
+    highlight: textmate
+    number_sections: yes
+    theme: journal
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message = FALSE)
+```
+
+#Introducción
+
+Este documento presenta algunos métodos básicos para el análisis de datos categóricos y las funciones de R que nos permiten llevarlos a cabo. Nos concentraremos en la creación de tablas de contingencia, ajuste de modelos de independencia $\chi$^2^2 y loglineales y medidas de asociación para variables categóricas nominales, además de algunos métodos gráficos para visualizar datos categóricos. 
+Otros métodos más avanzados serán cubiertos en documentos posteriores, puntualmente los métodos de modelado lineal --modelos logit--, reducción de la dimensionalidad --Análisis de Correspondencias Múltiples-- e inferencia de variables latentes --Análisis de Clases de Latentes. Sin embargo su comprensión y aplicación reposan en el conocimiento de los métodos básicos. 
+
+
+##Datos categóricos 
+
+Entendemos por datos categóricos a aquellos que definen la pertenencia de un objeto estadístico a una categoría o clase de acuerdo a alguno de sus atributos. De acuerdo con el nivel de medición los datos categóricos corresponden a las variables medidas en escalas nominales u ordinales, aunque aquí nos centraremos en las nominales. Una variable nominal asigna pertenencia a una categoría excluyente, es decir, señala una igualdad o diferencia. En términos lógicos la única operación que podemos realizar es `a=b` o `a`$\neq$`b`. En el caso de las ordinales existe una magnitud, algunas categorías tienen más y otras tienen menos de algún atributo, por lo que es posbible hacer operaciones como `a>b` o `a<b`. Sin embargo esa magnitud expresa una distancia desconocida. 
+
+
+Escala de Medición| Propiedad Sistema Numérico| Operación Matemática| Ejemplos
+------------------|---------------------------|---------------------|------------------
+Nominal           |Identidad                  | Contar Frecuencias  | Sexo
+Ordinal           |Magnitud                   | Ordenar             | NSE
+Intervalo         |Distancia                  | Suma, Resta         | Calificaciones del Mora
+Razón             |Cero indica ausencia de valor | Multiplicación, División |Ingreso, Edad
+
+Table: Niveles de medición. Adaptado de Steves, 1946. 
+
+# Tablas
+
+En su forma directa una variable categórica es un vector de nombres de categorías.  
+
+```{r}
+library(tidyverse)
+library(pander)
+genero <- data.frame(`Género`=c("F", "M", "LGBT", "M", "M", "F", "F", "F", "M", "M")) 
+pander(genero, caption="Variable Género") 
+```
+
+Sin embargo para tratar a las variables categóricas con generalmente recurrimos a conteos. Esos conteos tienen la forma de y reciben el nombre de tablas. La tabla de conteos de *una* variable categórica tiene dos filas: una con las categorías de la variable y otra con la frecuencia o cantidad de veces que se observa esa categoría. 
+
+```{r}
+table(genero) %>% pander(., caption="Tabla de conteos de la variable Género")
+```
+
+Adicionalmente podemos expresar expresar expresar esos mismos datos como proporciones del total. 
+
+```{r}
+table(genero) %>% prop.table() %>% pander(., caption="Tabla de conteos de la variable Género")
+```
+
+¿Por qué pudimos expresar a los conteos como proporciones, lo que cuál implica realizar una división, operación matemática imposible para las variables nominales? Porque no realizamos la operación la operación sobre la variable, lo hacemos los conteos de la variable. Nos es posible dividir masculino entre género, pero podemos dividir 5 entre 10. 
+
+##Tablas de contingencia de dos dimensiones. 
+
+Las tablas de una sola variable son útiles para conocer la distribución univariadad de una variable categórica, expresada en cantidades o proporciones. Sin embargo el análisis de datos categóricos generalmente implica trabajar con más de una variable. Con más de una variable también podemos trabajar con tablas, a las que llamaremos tablas de contingencia.^[preferimos ese términos a tablas cruzadas. Sueno mucho más culto y las cruzadas terminaron en el Siglo XIII.] En función de la cantidad de variables que contemos en una tabla de contingencia definiremos el número de dimensiones de la tabla. Así, la Tabla 2 es una tabla de una dimensión. Una tabla de contingencia tiene 2 o más dimensiones. Es importante no confundir el *número de categorías* de las variables con el *número de dimensiones* de la tabla.
+
+Para tablas de contingencia bidimensionales visualmente las dimensiones se nos presentan como filas y columnas. En la intersección de cada fila y columna hay una celda que registra el conteo de las observaciones que pertenecen a ambas categorías. En términos de conjuntos, el conteo de objetos en la intersección de A y B. Nótese que la tabla debe incluir todas las intersecciones posibles, dadas por las categorías de la variable, aun cuando no haya observacion en ese conjunto de datos en particular. Se les asigna el conteo correspondiente: 0. 
+
+```{r}
+edad <- c(20, 32, 19, 42, 56, 19, 32, 20,  56, 56)
+cbind(genero, edad) %>% table() %>% pander(., caption="Tabla de contingencia para género y edad")
+```
+
+Para tablas de contingencia bidimensionales también es posible expresar los conteos como proporciones, pero en este caso podemos calcular diferentes tipos de proporciones: sobre el total, sobre las filas o sobre las columnas. 
+
+```{r}
+edad <- c(20, 32, 19, 42, 56, 19, 32, 20,  56, 56)
+cbind(genero, edad) %>% table() %>% prop.table(.) %>% pander(., caption="Proporciones sobre el total")
+cbind(genero, edad) %>% table() %>% prop.table(.,1 ) %>% pander(., caption="Proporciones sobre las filas")
+cbind(genero, edad) %>% table() %>% prop.table(.,2 ) %>% pander(., caption="Proporciones sobre las columnas")
+```
+
+
+##Tablas de contingencia en R. 
+
+En R la función básica para obtener tablas de conteos --incluyendo tablas de contingencia-- es `table()`. Es importante mencionar que la función `table()` no está pensada primariamente para el análisis visual de tablas, aunque podamos hacerlo. Produce solamente la tabla con los conteos con determinada estructura, de modo que podamos proseguir el análisis pasando esa tabla a otras funciones. Existen librerías con funciones para producir tablas de contingencias similares a las que ofrecen otros paquetes de software estadístico como SPSS, que incluyen además de los conteos proporciones sobre el total, filas, columnas, conteos marginales, residuales, modelos de independencia, etc. La aproximación de `table()`  es de múltiples pasos, primero obtenemos la tabla y después realizamos, sobre esa estructura de datos, realizamos las demás operaciones. Existen funciones que imitan el estilo verboso de esos paquetes, como `gmodels::CrossTable()`. En mi opinión la sintaxis complicada de estas funciones y el exceso de información no las hacen recomendables. 
+
+###Tablas de contingencia con `table()`
+Esta función recibe como input 1 o más vectores de las clases factor, caracter o numérico. A estos últimos los coerciona a factor para poder operar sobre ellos. Los vectores deben tener el mismo largo. 
+Nos regresa un objeto de la clase `table`, una estructura de datos especial para tablas. Dado que esta estructura forma parte de `base::` muchas funciones la reciben como input. Crear la tabla con `table()` usualmente es es un paso intermedio en el análisis, no el uotput final. 
+
+La sintaxis de `table()` es `table(x, y, useNA= c("no", "ifany", "always"))`, donde `x` y `y` son vectores y `useNA=` define el modo en que trataremos con los casos perdidos. `"no"` los excluye del conteo, `"ifany"` los incluye cuando están observados y `"always"` los incluye siempre en la tabla, aunque el conteo sea 0. Por defecto excluye a los NA del conteo. Dependerá de nuestro interés analítico incluir o no los casos perdidos en la tabla, en caso de hacerlo aparecerán como una nueva categoría de las variables. 
+
+`table()` nos regresa un objeto de la clase `table`. Al tener esta clase muchas otras funciones pueden reconocer que es una tabla de contingencia y hacer operaciones. `chisq.test()` para puebas $\chi$^2^2, `ca::ca()` para Análisis de Correspondencia, `vcd::mosaic()` para gráficos de mosaicos, entre otras, reciben como input un objeto de la clase `table`. También existe un método genérico `summary()` para tablas de contingencia, que regresa información sumaria sobre el objeto incluyendo una prueba de $\chi$^2^.
+
+La estructura de datos que subyace a los objetos `table` es el `array`, una matríz que puede tener más de dos dimensiones.^[Datos curiosos: cuando el array es de una dimensión también pertenece a la clase vector, cuando tiene dos dimensiones también pertenece a la clase matríz o `matrix`.] Los arrays producidos por `table()` tiene tantas dimensiones como variables hayamos incluido en la tabla. Al ser un array podemos hacer todas las operaciones --matemáticas y de manipulación-- que podemos hacer con esa estrucura: todas las operaciones algebraicas entre matrices y con escalares como sumas, restas, etc.; extraer subconjuntos con `[,,,]`, etc. Cuando decimos que en R una tabla es un insumo para seguir trabajando lo decimos en serio. 
+
+Ese array tiene el atributo `dimnames()` con los nombres de filas, columnas, etc. tomados de los niveles del factor de las variables originales. Sin embargo al ser un atributo no estan *en* la estructura de datos, la acompañan. El tipo de datos es numérico, así que nunca tendremos problemas para las operaciones matemáticas. 
+
+###Proporciones y sumas marginales para una tabla de contingencia. 
+
+Cuando analizamos tablas de contingencia las proporciones marginales --totales, de fila o columna-- facilitan la visualización de las diferencias. La función `prop.table()` se encarga de calcularlos. Esta función recibe como input una tabla y regresa otra, con las proporciones en lugar de los conteos. 
+
+La sintaxis de `prop.table()` es `prop.table(x, márgen)`, donde `x` es un objeto de la clase `table` y margen es un número del 0 al 2 que indica el margen sobre el que se computará la proporción: `0` para el total de la tabla, `1` para las filas y `2` para la columnas. Para tablas de más de dos dimensiones podemos usar números mayores. 
+
+Si queremos obtener los perfiles de fila o columna podemos usar `margin.table()`, que regresa un vector con los perfiles marginales. 
+La sintaxis de `margin.table()` es `margin.table(x, márgen)`, donde x es un objeto de la clase `table` y márgen un número del `1` al `2`: uno para las sumas marginales de las filas y 2 para las columnas. Nos regresa un vector. 
+
+Si qeremos agregar a la tabla las sumas marginales usamos la función `addmargins()`, con la sintaxis `addmargins(x, c(margen, margen))`. El vector de márgenes creado con `c()` observa las mismas reglas ya expuestas. Nos regresa un objeto de la clase `table` conlas mismas dimensiones del orginal al que ha agregado una fila y/o una coluna para las sumas marginales. 
+
+```{r}
+#Dos vectores de: variables categóricas.  
+rock <-   c("Sí", "No", "Sí", "No", "No", "Sí", "No", "No", "No", "No")
+cumbia <- c("No", "No", "Sí", "Sí", "Sí", "No", "Sí", "Sí", "Sí", "Sí")
+
+#Tablas univariadas (conteos).
+
+table(rock)
+table(cumbia)
+
+#Tabla de contingencia. 
+
+table(rock, cumbia)
+
+#Tabla de contengencia con proporciones marginales por filas. 
+
+x <- table(rock, cumbia) #Asigno un nombre a la resultante de table() 
+
+prop.table(x)            #Por defecto proporciones totales. 
+
+prop.table(x, 1)         #1: proporciones de fila.
+
+prop.table(x, 2)*100     #Dos: proporciones porcentuales de columnas. 
+
+#Sumas marginales: 
+
+margin.table(x, 1)      #Filas
+
+margin.table(x, 2)      #Columnas
+
+#Tabla con marginales adosados. 
+
+addmargins(x, c(1, 2))
+
+```
+
+#Prueba de hipótesis de independencia estadística para tablas de contingencia.  
+
+Como vimos en las tablas del ejemplo anterior los oyentes de rock y cumbia parecen no ser las mismas personas: quién escucha rock tiene una probabilidad baja de escuchar cumbia y viceversa. Si cumbia y rock fueran variables medidas en la escala razón podríamos estimar el coeficiente de correlación, pero como son variables categóricas no es posible. Lo que sí podemos es verificar si hay alguna tipo de relación entre esas variables comparando los datos observados con una tabla ideal que presenta la distribución que recíproca que tendrían esas variables si estuvieran distribuidas al azar. Es decir, si escuchar cumbia no afectara la probabilidad de escuchar rock y viceversa. Esa tabla ideal no existe, pero podemos crerla y llamarla *modelo de independencia*: nos indica la forma que tendrían los conteos si las variables fueran independientes. Si la tabla observada tiene una gran divergencia con respecto al modelo de independencia podríamos afirmar que no hay independencia entre las variables: hay algo que no es el azar que está incidiendo en su distribución. 
+Em términos más precisos --y aburridos-- haremos una prueba de hipótesis. 
+
+##El modelo de independencia. 
+
+Acompáñeme a un situación hipotética. [Rexthor, the dog-bearer](https://xkcd.com/1725/), una criatura mitológica y malvada que acecha a los analistas cualitativos nos ha robado una tabla de contingencia, pero nos ha olvidado llevarse las sumas marginales. Empecemos por agradecer que fue Rexthor y no [\\\\\\\\\\\\\\\\\\\\\\...](https://xkcd.com/1638/) y luego preguntémonos cómo podríamos reconstruir la tabla original con esos datos. La respuesta es: ninguna manera. Sin embargo podríamos crear una tabla completa en la que se respeten las sumas marginales y se aproxime -más o menos, nunca lo sabremos-- a la tabla original. 
+
+```{r}
+#Función para estimar valores esperados. 
+
+esperados <- function (x) {
+  res = matrix(rep(0, length(x)), ncol=ncol(x)) 
+for(i in 1:nrow(x)) {
+  for(j in 1:ncol(x)) {
+    res[i,j] = (margin.table(x, 1)[i] * margin.table(x, 2)[j])/sum(x) }}
+  return(res)}
+
+#Código para ejemplo: Ya no lo voy usar.
+addmargins(x, c(1,2)) ->rexthor
+rexthor[1:2, 1:2] <- NA
+names(rexthor) <- names(x)                     #Perdió los nombres al coercinarla a matríz. 
+pander(rexthor, caption="La tabla robada")
+```
+
+¿Cómo lo hacemos? La forma más simple es multiplicar los conteos marginales para cada celda y luego dividirlos por la n, el total de observaciones. Las proporciones marginales indican la probabilidad de que un objeto --en el sentido estadístico-- pertenezca a cierta categoría. En cada celda ubicamos el conteo según la probabilidad conjunta de la categoría de las filas y de la de las colunas. Por las proporciones marginales de la tabla robada sabemos sabemos que una observación tiene una probabilidad de 0.6 de no escuchar rock y $P=0.3$ de no escuchar cumbia. Es decir, una probabilidad conjunta de 0.18 obtenida al multiplica 0.6 y 0.3. 
+Podemos describir a ese valor como $P(Rock_{no}|Cumbia_{no})$: la probabilidad de no escuchar rock ni cumbia. 
+
+En esta tabla las probabilidades marginales son conocidas, pero las centrales no. Estamos usando un criterio para contruirla: que las probabilidades marginales tienen información suficiente para crear la tabla y que cualquier otra variación es producto del azar. Según nuestro supuesto las únicas variables que afectan la probabilidad de cada celda son ellas mismas, el resto es azar. Este modelo reconstruye los conteos asumiento que esas variables son independientes en su distribución, es decir, dependen solamente de ellas mismas. Por eso lo llamamos modelo de independencia: son la reconstrucción ideal de una distribución de probabilidades conjuntas en el que ambas variables son indepenendientes. 
+
+Veamos, pues, que conteos produce el modelo de independencia para la tabla robada.  
+
+```{r}
+espe <- esperados(x)
+dimnames(espe) <- dimnames(x)
+pander(espe, caption="Frecuencias esperadas bajo el supuesto de independencia estadística")
+```
+
+
+Agradezcamos la amabilidad de Rexthor, the dog-bearer, que nos ha regresado la tabla original. Ahora podemos comparar cuan buena era la predicción de nuestro modelo. Directamente computaremos la diferencia entre los valores centrales de la tabla --los marginales ya sabemos que son iguales.
+
+```{r}
+residuos_crudos <- x-esperados(x)
+pander(residuos_crudos, caption="Residuales crudos")
+```
+
+El modelo exageró el número de de personas que no escuchar cumbia o rock y el número de personas que escuchan ambos, y subestimó el número de personas que escuchan uno u otro. A esas divergencias entre el valor esperado --que el que el modelo había predicho-- y el valor observado --el de la tabla original-- es el error del modelo, a los que llamamos residuos crudos y son un paso intermedio, pero no tienen gran utilidad. Si quisieramos obtener un estadístico que resumiera en un número la diferencia la suma de los residuos crudos siempre nos daría 0, lo cuál no es muy informativo. 
+Karl Pearson resolvió este problema matemático con el estadístico $\chi$^2^. Al elevar al cuadrado los residuos se soluciona el problema de los signos positivos y negativos: cualquier número elevado al cuadrado es positivo. Al dividir la diferencia al cuadrado por el valor esperado se logra un efecto de normalización.
+Para obtener el estadístico usamos la formula $\chi^2=\frac{\sum(O-E)^2}{E}$.
+
+Aplicando la formula del estadístico $\chi$^2^2 para nuestra tabla encontramos que el valor para nuestra tabla es `r sum(((x-esperados(x))^2)/esperados(x))`. Para otras tablas podría ser un número mayor o menor, dependiendo de la divergencia entre datos observados y esperados. 
+
+##Prueba de independencia para una tabla bidimensional.
+
+Conociendo el estadístico $\chi$^2^ tenemos una medida sintética de la desviación entre los conteos que arrojó el modelo de independencia y los de la tabla observada. Como mencionamos previamente la tabla que obtenemos a partir del modelo de independencia no es la única tabla al azar posible, sólo la más probable. Podría ser interesante *estimar la probabilidad de obtener una tabla como la observada bajo condiciones de independencia*. Esto es lo que hacemos cuando realizamos una prueba de hipótesis de independencia estadística para una tabla de contingencia: estimar la probabilidad de nuestra tabla dada la hipótesis de independencia entre filas y columnas. Es preciso tener muy claro que *no estamos estimando la probabilidad de nuestra hipótesis dados los datos*, estamos haciendo exactamente lo contrario. 
+
+Para estimar la probabilidad de nuestros datos dada la hipótesis de independencia usamos la distribución $\chi$^2^, que se resume en una tabla que asigna una probabilidad a cada valor del estadístico $\chi$^2^. Resta solventar otro problema. El estadístico $\chi$^2^ es sintético, quizás demasiado sintético. Nuestra tabla es de 2x2 y podemos esperar que, todas las cosas igual, produzca siempre menos residuos que una tabla con más celdas, por un efecto simplemente matemático. Para corregir este problema la distribución $\chi$^2^ estipula grados de libertad, que corrigen las probabilidades por el tamaño de la tabla. Los grados de libertad se calculan usando la fórmula $gl=(filas-1)(columnas-1)$. El número de filas menos uno multiplicado por el número de columnas menos uno, es decir, tenemos un grado de libertad. Con el valor del estadístico $\chi$^2^ y el valor de los grados de libertad podemos estimar la probabilidad de la tabla observada bajo condiciones de independencia estadística. En este caso es `r 1-pchisq(sum(((x-esperados(x))^2)/esperados(x)), 1)`, este es nuestro p-value. Dependiendo del criterio que usemos para la prueba de hipótesis rechazamos o no la hipótesis de nulidad. 
+
+>Nota general sobre las pruebas de hipótesis.   
+>Las pruebas de hipótesis son una de las operaciones estadísticas más importantes, hay pocas dudas al respecto. Sin embargo es de la mayor importancia no ritualizarlas, reduciéndolas a verificar si el p-value es menor a 0.001 --¡tiene tres asteriscos! ¡es ciencia^TM^!-- ni interpretarlas como lo que no son --una prueba de *nuestra*  hipótesis sustantiva de investigación. 
+En el marco frecuentista en el que nos estamos ubicamos una prueba de hipótesis sólo nos informa sobre la probabilidad de nuestros datos dada una hipótesis de nulidad, formalmente $p(D|H0)$, donde H0 es la hipótesis de nulidad a la que podemos aceptar o rechazar. Esto no es igual a $p(H~0~|D)$, la probabilidad de la hipótesis de nulidad dados nuestros datos.  Y tampoco nos dice mucho sobre la calidad de la hipótesis de nulidad. Si nuestra hipótesis de nulidad es lisa y llanamente disparatada nuestros datos siempre tendrán una probabilidad muy baja de ocurrir *dada esa hipótesis disparatada*, pero en el mundo quien sabe. Siempre que sea posible es una buena práctica probar nuestros datos contra una hipótesis informada. La hipótesis de nulidad formulada como independencia estadística que probamos más arriba es bastante razonable, pero una hipótesis más sólida surgida de una teoría sustantiva sería muchísimo mejor. 
+
+#Análisis de los residuos. 
+
+Aunque las pruebas de hipótesis de independencia estadística nos dan un criterio para considerar si hay o no una relación entre las variables que hemos tabulado el análisis de datos categóricos no se detiene allí. Si queremos saber cuáles categorías son las más divergentes --es decir, en cuáles es mayor la diferencia entre valores esperados y observados-- podemos observar como se distribuyen los residuos. 
+Los residuos crudos que elaboramos anteriormente nos dan una idea de las diferencias entre valores observados y esperados, pero es dificil compararlos de manera directa ya que no son sensibles a los tamaños de fila o columna. En nuestro caso todos los residuos son 1.1 o -1.1, pero no sabemos si un residuo de 1.1 eso es mucho o poco. Para nuestra tabla, con sólo 10 observaciones, es una divergencia bastante grande, pero esos mismos números para una para una tabla con conteos en el orden de los miles sería muy poco. Para solucionar este problema Karl Pearson ideó una fórmula que estandariza los residuos según la cuál $Residuales Estandarizados=\frac{(O-E)}{\sqrt{E}}$. De este modo obtenemos los Residuales de Pearson.
+
+```{r}
+pander ((x-esperados(x))/sqrt(esperados(x)), caption="Residuales de Pearson")
+```
+
+## Prueba $\chi$^2^ en R.
+
+###Pruebas de independencia con `chisq.test()`
+
+La función `chisq.test()` de R realiza todos los pasos que hemos llevado a cabo de una manera muy simple y, dado que incluye algunos factores de corrección que no hemos considerado en el desarrollo anterior, más preciso. La sintaxis básica es `chisq.test(x, correct=TRUE)`, donde `x` es un objeto de la clase `table` y `correct=` es un valor lógico que señala si se hará la corrección de Yates (TRUE, por defecto) o no (FALSE, opcional).^[Dado que no todos los programas estadísticos realizan la correción de Yates puede ser útil elimar esta opción para obtener resultados consistentes.] En consola nos regresa un sumario de la prueba de hipótesis, pero podemos guardar el objeto completo resultante. Este pertenece a las clases `htest` y `list` y contiene información muy detallada sobre el modelo. 
+
+```{r} 
+chisq.test(x)                 #Donde x es la tabla de cumbieros y rockeros. 
+chisq.test(x, correct=FALSE)  #Sin la corrección de Yates. 
+str(chisq.test(x, correct=FALSE))
+```
+
+
+#Métodos gráficos
+
+#Modelos para datos categóricos 
+
+#Suelto
+
