@@ -1,0 +1,28 @@
+---
+title: "Análisis de datos categóricos con R y Rstudio"
+author: 
+- Martín Paladino^[mpaladino@mora.edu.mx]
+date: Actualizado el `r format(Sys.time(), "%d/%m/%Y")`
+output: 
+  html_document: 
+    theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#[Introducción al análisis de datos categóricos](https://martinpaladino.github.io/Datos_categoricos.html)
+
+- Definición de datos categóricos. 
+
+- Tablas y tablas de contingencia. 
+    - Proporciones totales, de fila y columna. 
+    - Sumas de fila y columna. 
+    
+- Modelo de independencia $\chi$^2.
+    - Prueba de independencia $\chi$^2.
+    
+#[Análisis de correspondencias y correspondencias múltiples.]()
+
+#[Análisis de clases latentes]()
