@@ -24,6 +24,16 @@ Mis caprichos:
 
 #Guías de  R.
 
+##[Modelos lineales con R](martinpaladino.github.io/modelos_lineales_con_R.html)
+
+-Definición de modelo lineal.
+    - Obtención de coeficientes por mínimos cuadrados ordinarios. 
+- Ajuste de modelos lineales en R. 
+    - Sumario de un modelo. 
+    - Comparación de modelos. 
+- Diagnóstico de cumplimiento de supuestos de modelos lineales. 
+    - Modelos lineales robustos. 
+
 ##[Análisis de datos categóricos con R](https://martinpaladino.github.io/index_categoricos.html)
 
 - Datos categóricos. 
