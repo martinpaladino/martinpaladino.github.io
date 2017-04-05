@@ -22,7 +22,15 @@ knitr::opts_chunk$set(echo = TRUE)
     
 - Modelo de independencia $\chi$^2.
     - Prueba de independencia $\chi$^2.
-    
+
+#[Análisis prácticos de datos categóricos con tablas de contingencia](https://martinpaladino.github.io/analisis_practico_de_datos_categoricos.html)
+
+- Tablas de contingencia.
+- Recodificación de datos categóricos. 
+    - Compactar categorías de una variable.
+- Visualización de datos categóricos. 
+- Pruebas de independencia estadística por grupos. 
+
 #[Análisis de correspondencias y correspondencias múltiples.]()
 
 #[Análisis de clases latentes]()

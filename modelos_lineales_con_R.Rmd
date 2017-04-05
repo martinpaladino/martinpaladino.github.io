@@ -13,7 +13,8 @@ output:
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(pander)
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.height = 9)
+
 marginacion <- read_csv("./datos/Base_Indice_de_marginacion_municipal_90-15.csv", col_types = cols(`AÑO` = col_character()), 
     locale = locale(encoding = "UTF-8")) %>%  
       mutate (POB_TOT=gsub(" ","", POB_TOT)) %>%
@@ -285,6 +286,10 @@ AIC(moli1, moli2, moli3, moli4, moli5)
 ```
 
 Con este criterio el Modelo 5 es el mejor: produce el mejor ajuste con el menor número de parámetros.  
+
+##Modelos lineales con variables independientes categóricas. 
+
+>Pendiente. 
 
 #Supuestos de un modelo lineal. 
 

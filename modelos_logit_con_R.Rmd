@@ -1,0 +1,198 @@
+---
+title: "Modelo logit con R"
+author: "Martín Paladino"
+date: "4 de abril de 2017"
+output:
+  html_document:
+    highlight: textmate
+    number_sections: yes
+    theme: journal
+    toc: yes
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+#Introducción.
+Los [modelos lineales](martinpaladino.github.io/modelos_lineales_con_R.html) nos permiten predecir el valor de una variable a partir del valor de otra u otras. En su formulación original se desarrollaron para variables dependientes continuas, es decir, para estimar los valores que toma y para cada valor de x a partir de una ordenada al origen y una o más pendientes. Sin embargo puede ser de interés tomar como variables dependiente a una categórica y eso es lo que hacen los modelos logit, también conocidos como regresión logística. Claro que no es muy util predecir cualquier valor de $y$ dadas $x_1$, $x_2$, $x_n$, dado que $y_{categórica}$ solamente puede adquirir dos valores, 0 y 1. Lo que buscaremos predecir son las probabilidades de 0 o 1. Es decir, dado cierto valor de $x$ ¿cuál es la probabilida de $y_0$ y de $y_1$? 
+Podríamos simplificarnos la taréa y ajustar sin modificaciones un modelo lineal con la forma de la ecuación 1. 
+
+(@lineal_simple) $y=\beta_0+\beta_1x+...\beta_ix$
+
+Le pediríamos al modelo que predizca 0 o 1, al fin y al los podríamos considerar valores numéricos e interpretar adecuadamente. Sin embargo estaríamos violando los supuestos de un modelo lineal: la distribución de probabilidad de y categórica no es normal. Sin embargo no todo está perdido. Si y no se ajusta a una distribución normal se puede ajustar a otras distribuciones y, para y dicotómica, podemos asumir que se ajusta a una distribución binomial. En ese caso podemos usar la ecuación (@logit)
+
+(@logit) $ln(\frac{p_1}{1-p_1})=\beta_0+\beta_1x+...\beta_ix$
+
+El lado derecho es igual de cualquier modelo lineal, pero el lado izquierdo tiene pecualiaridades que vale la pena comentar. Como mencionamos, ya no buscamos al valor de $y$ como una combinación lineal de los valores de $x_1...X_i$. Lo que buscamos es el *logaritmo de las razones de probabilidad de $y=1$*, que obtenemos dividiendo las probabilidades 1 por la probabilidad de 0.^[Como sabemos que la probabilidad de varía entre 0 y 1 entonces 1 menos la probabilidad de de 1 es igual a la probabilidad de 0.] 
+
+>Excurso: El momio tiene razones, que la razón desconoce. 
+
+>Las razones de probabilidad, también llamadas razones de momio o odds ratio, se obtienen dividiendo la probabilidad de éxito por las de fracaso o, más secamente, la probabilidad de 1 entre la probabilidad de 0. Son una transformación de la probabilidad usuales, que varían entre 0 y 1, pero en lugar de eso varían entre 0 e infinito. Una razón de probabilidad 1 significa que ambos eventos tienen la misma probabilidad: la obtuvimos dividiendo 0.5 entre 0.5 Una probabilidad mayor que 1 significa que el evento éxito es más probable que el evento fracaso y menor que uno lo inverso. 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(knitr)
+tribble(~fila,~p0, ~p1,
+            1,0.1, 0.9,
+            2,0.2, 0.8,
+            3,0.3, 0.7, 
+            4,0.4, 0.6, 
+            5,0.5, 0.5, 
+            6,0.6, 0.4, 
+            7,0.3, 0.7, 
+            8,0.2, 0.8, 
+            9,0.1, 0.9) %>% 
+  mutate(`RP 1`=p1/p0, `RP 0`=p0/p1) %>% 
+  kable(., caption="Razones de probabilidad de algunos pares de probabilidades")
+```
+
+>La razón de probabilidad nos da una magnitud de cuanto más probable es un evento que otro. En la cuarta fila de la Tabla 1 encontramos que el evento 1 tiene una razón de probabilidad de 1.5. Esto significa que es un 50% más probable obtener 1 que obtener 0. En la sexta fila la razón de probabilidad de 1 es 0.666: obtener 1 es un 66% menos probable que obtener 0. Profunizaremos estos conceptos más adelante, cuando veamos la itnerpretación de los coeficientes de un modelo logit. Por ahora aceptemos que las razónes de probabilidad son más complicadas de interpretar que las probabilidad a las que estamos acostumbrados, pero no es posible ajustar modelos lineales para variables categóricas de otro modo. C'est comme ça. 
+
+#Ajuste  de modelos logit con `glm()`
+
+Los modelos logit forman parte de lo que conocemos como Modelos Lineales Generalizados. Utilizamos la expresión generalizados porque son un marco general dentro del que caben casos particulares. Los modelos lineales con y continua son un caso particular de los generalizados: aquellos con una distribución normal y una función de enlace directa^[Estimamos directamente el valor y.]. Los modelos logit son un caso particular de los modelos lineales generalizados en los que la distribución es binomial y la función de enlace el logaritmo de las razones de probabilidad, es decir, la función logit que les da nombre. 
+
+La función `glm()` de R nos permite ajustar modelos lineales de muchos tipos, incluyendo los que ajustamos con `lm()`, modelos de Poisson y los logit en los que nos enfocaremos. 
+La sintaxis básica para obtener un modelo lineal es `glm(depeendiente~independiente1+independiente2, family="binomial", data=datos")`.
+
+El primer argumento es un objeto de la clase fórmula. A la izquierda del signo  `~` ubicamos a la variable dependiente y a la derecha, unidos por el signo `+` las independientes, si no estamos especificando una interacción entre variables. 
+
+El segundo, `family=binomial()`, especifica la función de probabilidad que utilizaremos. Para modelos logit es una función binomial. 
+
+El tercero apunta a un data.frame en el que están los datos. Los nombres de columna del data.frame deben coincidir con las variables especificadas en la fórmula, aunque podría contener más variables que serán descartadas. En el caso de hacere previamente una manipulación de datos encadenada con el operador ` %>%` usamos `.` como sustituto anónimo de los datos. 
+
+##Presentación de los datos.
+
+Introduciremos una nueva base de datos y una hipótesis sustantiva para que nos sirva de guía. La base elaborada por el Sistema de Información Municipal del Instituto Nacional para el Federalismo y el Desarrollo Municipal tiene información sobre los presidentes municipales de México, incluyendo el sexo, partido y título. Como incluye  el número de municipio y entidad federativa podemos combinar esta base de datos con la de CONAPO para agregar más variables. La base de datos tienen algunos problemas que requieren manipulación y que hemos atendido en otra parte(AGREGAR EL ENLACE). Trabajaremos con la base ya limpia, con una N=1873. 
+Queremos explorar qué variables explican que un municipio tenga presidente o presidenta municipal. Nuestra primer hipótesis es que el partido político es una buena variable explicativa, considerando que los partidos progresistas son más propensos a apoyar candidaturas femeninas. Sin embargo otras variables podrían intervenir: la ruralidad/urbanidad del municipio, el Grado de Marginación, la región, etc. 
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(stringr)
+#Carga base presidentes municipales ====
+presidentes_municipales <- 
+  read_csv("./datos/presidentes_municipales.csv", col_types = cols(ap_materno = col_character(), fecha_actualizacion = col_character(), pdo_gob_ini = col_character()))
+
+#Carga base marginación. ====
+marginacion <- 
+  read_csv("./datos/Base_Indice_de_marginacion_municipal_90-15.csv", col_types = cols(`AÑO` = col_character()), 
+    locale = locale(encoding = "UTF-8")) %>%  
+      mutate (POB_TOT=gsub(" ","", POB_TOT)) %>%
+      mutate(POB_TOT=as.integer(POB_TOT)) %>%
+      filter(ENT!="Nacional" & AÑO=="2015")
+names(marginacion)[1] <- "CVEMUN" 
+
+#Función para arreglar la base presidentes y unirla con marginación. 
+arreglar_y_unir <- function(.) {
+  separate(.,integrantes, into=("cabeza_coalicion")) %>%                  
+  dplyr::mutate(partido_coalicion=ifelse(is.na(cabeza_coalicion), partido, cabeza_coalicion)) %>%  
+    mutate(partido_coalicion=ifelse(partido_coalicion=="CPU", "PAN", partido_coalicion)) %>% 
+    mutate (id_estado= ifelse(str_length(id_estado)==1, 
+                            paste0("0", id_estado), 
+                            id_estado)) %>% 
+    mutate(id_municipio= ifelse(str_length(id_municipio)==1, 
+                              paste0("00", id_municipio),
+                              ifelse(str_length(id_municipio)==2, 
+                                     paste0("0", id_municipio), 
+                                     id_municipio))) %>% 
+    mutate(prof=ifelse(titulo=="C.", "C", "P")) %>% 
+  mutate(CVEMUN=paste0(id_estado, id_municipio)) %>% 
+  inner_join(., marginacion) %>% 
+  inner_join(., tabla_regiones) %>% 
+  return(.)}
+
+#hash table: regionalización.=====
+tribble(~REGION,        ~ENT_CORTO,           ~CVE_ENT,
+        "Centro_norte", "Aguascalientes",     "01",     
+        "Centro_norte", "Guanajuato",         "11",    
+        "Centro_norte", "Querétaro",          "22",     
+        "Centro_norte", "San Luis Potosí",    "24",    
+        "Centro_norte", "Zacatecas",          "32",     
+        "Centro_sur",   "Ciudad de México",   "09",    
+        "Centro_sur",   "México",             "15",     
+        "Centro_sur",   "Morelos",            "17",    
+        "Este",         "Hidalgo",            "13",     
+        "Este",         "Puebla",             "21",    
+        "Este",         "Tlaxcala",           "29",     
+        "Este",         "Veracruz",           "30",    
+        "Noreste",      "Coahuila",           "05",     
+        "Noreste",      "Nuevo León",         "19",    
+        "Noreste",      "Tamaulipas",         "28",     
+        "Noroeste",     "Baja California",    "02",    
+        "Noroeste",     "Baja California Sur","03",     
+        "Noroeste",     "Chihuahua",          "08",    
+        "Noroeste",     "Durango",            "10",     
+        "Noroeste",     "Sinaloa",            "25",    
+        "Noroeste",     "Sonora",             "26",     
+        "Oeste",        "Colima",             "06",    
+        "Oeste",        "Jalisco",            "14",     
+        "Oeste",        "Michoacán",          "16",    
+        "Oeste",        "Nayarit",            "18",     
+        "Sur_este",     "Campeche",           "04",    
+        "Sur_este",     "Quintana Roo",       "23",     
+        "Sur_este",     "Tabasco",            "27",    
+        "Sur_este",     "Yucatán",            "31",     
+        "Sur_oeste",    "Chiapas",            "07",    
+        "Sur_oeste",    "Guerrero",           "12",     
+        "Sur_oeste",    "Oaxaca",             "20" 
+        ) ->tabla_regiones 
+```
+
+
+Las variables que consideraremos son las siguientes: 
+
+Variable  | Descripción
+----------|----------------------------------------------
+sexo      | Sexo del presidente o presidenta municipal (H o M)^[Retomamos la codificación de la base de datos.]
+prof      | Recodificada: C=Ciudadano, P=Profesional.
+partido_coalicion | Partido gobernante o cabeza de coalición gobernante.
+POB_TOT    | Población total del municipio.
+GM        | Grado de Marginación.
+REGION    | Región geográfica.
+
+Table: Variables a modelar. 
+
+###Desciptivos de la base de datos. 
+
+```{r, descriptivos, results= 'asis', echo=FALSE}
+library(pander)
+arreglar_y_unir(presidentes_municipales) %>% 
+  dplyr::select(sexo, prof, partido_coalicion, POB_TOT, GM, REGION) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  summary() %>% 
+  pander(., caption="Sumario de la base de datos", missing="")
+```
+
+##Un modelo lineal con `glm()`
+
+En el primer modelo estimamos el cambio en el logaritmo de la razón de probabilidad de la variable sexo a medida que cambia el partido político. Dado que hay muchos partidos los compactaremos a solamente 6: PRI, PAN, PRD, PVEM, PMC, PT y Otros. 
+
+```{r, results='asis'}
+library(forcats)
+library(stargazer)
+library(mfx)
+arreglar_y_unir(presidentes_municipales) %>% 
+  rename(POmenor5000=`PL<5000`) %>%                                                #El signo < trae algunos problemas, cambio el nombre a la variable. 
+  select(sexo, partido_coalicion, POB_TOT, IM, POmenor5000) %>%                   #Y la elimino.    
+  mutate_if(is.character, as.factor) %>%                                           #Paso a factor las variables que eran cadenas de caracter
+  mutate(partido_coalicion=fct_lump(partido_coalicion, 6, other_level="Otro")) %>% #Compato a 6 categorías la variable partido. 
+  mutate(partido_coalicion=fct_relevel(partido_coalicion,"PRI")) %>%               #Ubico al PRI como categoría de referencia
+  glm(sexo~partido_coalicion+POB_TOT+IM+POmenor5000, family=binomial(), data=.) -> #Ajusto el modelo: family=binomial() para logit
+  molige1 
+summary(molige1)                                                                   #Extraigo un sumario.   
+```
+
+Ya tenemos los resu
+
+```{r}
+
+arreglar_y_unir(presidentes_municipales) %>% 
+  rename(POmenor5000=`PL<5000`) %>% 
+  dplyr::select(sexo, partido_coalicion, POB_TOT, IM, prof, GM, POmenor5000) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  mutate(partido_coalicion=fct_lump(partido_coalicion, 6, other_level="Otro")) %>% 
+  mutate(partido_coalicion=fct_relevel(partido_coalicion,"PRI")) %>%                 #Ubico al PRI como categoría de referencia.
+  logitmfx(sexo~partido_coalicion+POB_TOT+IM+POmenor5000, data=.)
+
+```
+
