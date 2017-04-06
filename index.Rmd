@@ -24,6 +24,15 @@ Mis caprichos:
 
 #Guías de  R.
 
+##[Modelos logit con R](martinpaladino.github.io/modelos_logit_con_R.html)
+
+- Definición de modelos logit. 
+    - Ajuste de modelos logit con R. 
+- Interpretación de coeficientes. 
+- Presentación de resultados. 
+    - Gráficos de coeficientes. 
+    - Efectos totales y efectos marginales. 
+
 ##[Modelos lineales con R](martinpaladino.github.io/modelos_lineales_con_R.html)
 
 -Definición de modelo lineal.
