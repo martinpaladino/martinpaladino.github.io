@@ -51,7 +51,7 @@ tribble(~fila,~p0, ~p1,
             7,0.3, 0.7, 
             8,0.2, 0.8, 
             9,0.1, 0.9) %>% 
-  mutate(`RP 1`=p1/p0, `RP 0`=p0/p1) %>% 
+  mutate(`RP 1`=p1/p0) %>% 
   kable(., caption="Razones de probabilidad de algunos pares de probabilidades")
 ```
 
@@ -148,7 +148,7 @@ tribble(~REGION,        ~ENT_CORTO,           ~CVE_ENT,
 
 arreglar_y_unir(presidentes_municipales) %>% 
   rename(POmenor5000=`PL<5000`) %>%                                                
-  select(sexo, partido_coalicion, POB_TOT, IM, POmenor5000, REGION) %>%                   
+  select(sexo, partido_coalicion, POB_TOT, IM, POmenor5000) %>%                   
   mutate_if(is.character, as.factor) %>%                                           
   mutate(partido_coalicion=fct_lump(partido_coalicion, 6, other_level="Otro")) %>% 
   mutate(partido_coalicion=fct_relevel(partido_coalicion,"PRI")) ->presidentes
@@ -164,7 +164,6 @@ POmenor5000| % De población que vive en localidades de menos de 5000 habitantes
 partido_coalición | Partido gobernante o cabeza de coalición gobernante.
 POB_TOT   | Población total del municipio.
 IM        | Índice de Marginación.
-REGION    | Región geográfica.
 
 Table: Variables a modelar. 
 
@@ -204,7 +203,18 @@ La constante para la variable dependiente (Intercept) es  -1.735
 
 *¿Qué significa ese número?* De manera directa que el logaritmo de la razón de probabilidad de $y=1$ es -1.735. Sin embargo interpretar un logaritmo de razón de probabilidad no es lo más intuitivo. Al menos por el signo negativo sabemos que la probabilidad de $y=1$ es menor a la de $y=0$: hay menos mujeres presidentas municipales que hombres. Para hacer más intuitiva la interpretación podemos desandar el camino de la función de enlace de la ecuación (@logit). El primer paso es quitar el logaritmo y convertir al coeficiente en una razón de probabilidad: exponenciar el logaritmo. En R lo hacemos con la función `exp()`, que nos regresa el exponencial de un logaritmo. El exponencial de -1.735 es 0.176, redondeado. Por cada presidente municipal hay 0.176 presidentas o, lo que es lo mismo, hay 5.67 presidentes municipales por cada presidenta.    
 
+
+
 *¿De dónde salió?* Sobre 1881 presidentes municipales 282 son mujeres y 1599 hombres. Por lo tanto la probabilidad de presidenta municipal es 282/1881, es decir, 0.1499. Utilizando el lado derecho de la ecuación (@logit) podemos convertir a esta probabilidad en una razón de probabilidad: con $p1=0.1499$, $p1/(1-p1)=0.1499/(1-0.1499)=0.176$: aquí está nuestra razón de probabilidad, cuyo logaritmo es -1.735, el coeficiente que reportó el modelo. 
+
+```{r, tabla_sexo, echo=FALSE, results='asis'}
+`y=` <- c(0,1)
+Conteos <- table(presidentes$sexo)
+Probabilidades <- c(Conteos[1]/sum(Conteos), Conteos[2]/sum(Conteos))
+`Razón de probabilidad` <- c(1, Probabilidades[2]/(1-Probabilidades[2]))
+`Logaritmo RP` <- log(`Razón de probabilidad`)
+pander(rbind(`y=`,Conteos, Probabilidades, `Razón de probabilidad`, `Logaritmo RP`), caption="Presidentes y presidentas municipales")
+```
 
 ##Estimación de $\beta_1$
 
@@ -222,11 +232,18 @@ La salida de `glm()` incluye ahora un segundo coeficiente, llamado `partido_coal
 
 Podríamos obtener este mismo coeficiente a través de una tabla de contingencia y... vamos a hacerlo. 
 
-```{r}
+```{r, echo=FALSE, results='asis'}
 presidentes %>% 
   mutate(partido_coalicion=fct_lump(partido_coalicion, 1, other_level="Otro")) %>% 
   select(sexo, partido_coalicion) %>% 
-  table()
+  table() ->Conteos
+Probabilidades <- prop.table(Conteos, 2)
+rownames(Probabilidades) <- c("pH", "pM")
+`Razón de probalidad presidenta` <- Probabilidades[2,]/Probabilidades[1,]
+`RP presidenta Otro` <- c(1, `Razón de probalidad presidenta`[2]/`Razón de probalidad presidenta`[1])
+`y=` <- c(0,1)
+`log(RP presidenta Otro)` <- log(`RP presidenta Otro`)
+pander(rbind(`y=`, Conteos, Probabilidades, `Razón de probalidad presidenta`, `RP presidenta Otro`, `log(RP presidenta Otro)`))
 ```
 
 ¿Cuál es la probabilidad de ser presidenta municipal cuando el partido es el PRI? 154/687, es decir, el número de mujeres entre todos los presidentes y presidentas municipales tricolores. Esto equivale a 0.224163. Cuando es otro partido es 0.1405049, 128 presidentas sobre un total 911. Entonces podemos calcular la razón de probabilidad de presidenta para Otro partido vs el PRI: 0.1405049/0.224163, que es igual 0.626798, cuyo logaritmo es -0.4671309, el coeficiente que nos regresó el modelo. 
