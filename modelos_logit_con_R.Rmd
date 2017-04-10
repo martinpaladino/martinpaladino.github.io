@@ -62,7 +62,7 @@ tribble(~fila,~p0, ~p1,
 Los modelos logit forman parte de lo que conocemos como Modelos Lineales Generalizados. Utilizamos la expresión generalizados porque son un marco general dentro del que caben casos particulares. Los modelos lineales con y continua son un caso particular de los generalizados: aquellos con una distribución normal y una función de enlace directa^[Estimamos directamente el valor y.]. Los modelos logit son un caso particular de los modelos lineales generalizados en los que la distribución es binomial y la función de enlace el logaritmo de las razones de probabilidad, es decir, la función logit que les da nombre. 
 
 La función `glm()` de R nos permite ajustar modelos lineales de muchos tipos, incluyendo los que ajustamos con `lm()`, modelos de Poisson y los logit en los que nos enfocaremos. 
-La sintaxis básica para obtener un modelo lineal es `glm(depeendiente~independiente1+independiente2, family="binomial", data=datos")`.
+La sintaxis básica para obtener un modelo lineal es `glm(dependiente~independiente1+independiente2, family=binomial(), data=datos")`.
 
 El primer argumento es un objeto de la clase fórmula. A la izquierda del signo  `~` ubicamos a la variable dependiente y a la derecha, unidos por el signo `+` las independientes, si no estamos especificando una interacción entre variables. 
 
@@ -263,7 +263,7 @@ presidentes %>%
 round(coef(molige3), 6)
 ```
 
-El coeficiente correspondiente a POmenor5000 es 0.006491, que interpretamos de la siguiente manera: por cada unidad porcentual de adicional de población viviendo en localidades menores a 5000 habitantes el logaritmo de la razón de probabilidad de presidenta municipal aumenta 0.0006491. Más adelante veremos maneras menos rebuscadas de comunicar estos resultados, por ahora consideremos que nuestra hipótesis de la ruralidad tiene algo de evidencia a favor: la probabilidad de presidenta municipal aumenta con la ruralidad, medida de esta manera un tanto brusca. ¿Es el efecto de la ruralidad suficiente para hacer desaparecer el efecto del PRI vs Otros? No, los demás partidos mantienen una probabilidad de presidenta menor a la del PRI.
+El coeficiente correspondiente a POmenor5000 es 0.006491, que interpretamos de la siguiente manera: *por cada unidad porcentual de adicional de población viviendo en localidades menores a 5000 habitantes el logaritmo de la razón de probabilidad de presidenta municipal aumenta 0.0006491.* Más adelante veremos maneras menos rebuscadas de comunicar estos resultados, por ahora consideremos que nuestra hipótesis de la ruralidad tiene algo de evidencia a favor: la probabilidad de presidenta municipal aumenta con la ruralidad, medida de esta manera un tanto brusca. ¿Es el efecto de la ruralidad suficiente para hacer desaparecer el efecto del PRI vs Otros? No, los demás partidos mantienen una probabilidad de presidenta menor a la del PRI.
 
 ##Modelo logit con múltiples variables dependientes. 
 
@@ -275,23 +275,14 @@ presidentes %>%
 round(coef(molige4), 6)
 ```
 
-El primer dato interesante es que hay un partido con una probabilidad de presidenta todavía más alta que la del PRI: el Verde Ecologista.^[Si pensó que era un partido de izquierda necesita rodearse de más feministas.] Controlando por población, ruralidad e Índice de Marginación PRI y PVEM tienen probabilidades más altas de presidenta. Asimismo encontramos que, por cada punto de incremento de IM $log(p_{presidenta}/(1-p_{presidenta}))$ aumenta 0.032.
-Si bien los resultados no son concluyentes y quizás deberíamos incorporar más hipótesis sustantivas orientadas a explicar la prevalencia de presidentas municipales, por no hablar del mecanismo que hace el PRI y PVEM sean buenos predictores de presidentas municipales. De todos modo con  este modelo podríamos concluir que el partido es relevante para explicar si a un municipio lo gobierna un hombre o una mujer. 
+El primer dato interesante es que hay un partido con una probabilidad de presidenta todavía más alta que la del PRI: el Verde Ecologista.^[Si pensó que era un partido de izquierda necesita rodearse de más feministas.] Controlando por población, ruralidad e Índice de Marginación PRI y PVEM tienen probabilidades más altas de presidenta. Asimismo encontramos que, por cada punto de incremento de IM $log(\frac{p_{presidenta}}{(1-p_{presidenta})}$ aumenta 0.032.
+Si bien los resultados no son concluyentes. Deberíamos incorporar algunas hipótesis sustantivas orientadas a explicar la prevalencia de presidentas municipales, por no hablar del mecanismo que hace el PRI y PVEM sean buenos predictores de presidentas municipales. Los coeficientes sin un marco de hipótesis sustantivas no tienen mucha capacidad explicativa, en este caso nuestro análisis se limita a la descripción orientada por algunas hipótesis generales. 
+De todos modo con  este modelo podríamos concluir que el partido es relevante para explicar si a un municipio lo gobierna un hombre o una mujer, una correlación interesante que valdría la pena seguir investigando. 
 
 ##Pruebas de significancia. 
 
-Hasta ahora hemos tratado a los coeficientes como si fueran un parámetro: el verdadero valor de la pendiente, suficientemente informativo por sí mismo. Sin embargo no lo son, se trata estimaciones y, como tales, no son completamente precisas. En sentido estricto son el centro de una distribución de probabilidades de coeficientes, el valor más probable, pero no el único posible. Cuan dispersa es esa distribución nos lo indica el error estándar: cuanto mayor el error más dispersos estarán los coeficientes, cuanto menor, menos dispersos. 
-
-
-```{r}
-data.frame(`sigma0.3media0`=rnorm(100000, 0, 0.3), `sigma0.1media0`=rnorm(100000, 0, 0.1), `sigma0.3media1`=rnorm(100000, 1, 0.3), `sigma01media1`=rnorm(100000, 1, 0.1)) %>% 
-  gather() %>% 
-  ggplot(aes(x=value, fill=key)) + 
-  geom_density(alpha=0.5) + 
-  theme_minimal() 
-```
-
-Todos los coeficientes estimados del modelo cuatro son numéricamente distintos de 0: aparentemente tienen un efecto  sobre la probabilidad de presidenta. Pero si los consideramos el centro de una distribución de coeficientes deberíamos contemplar la posibilidad --probabilidad-- de que el verdadero coeficiente fuera otro, quizás 0. En concreto, deberíamos realizar una prueba de hipótesis en la que comparamos a los coeficientes obtenidos en el Modelo 4 con unos coeficientes hipotéticos iguales a 0. No es necesario que lo hagamos cada vez, el sumario de los modelos lineales generalizados nos presenta los resultados de esa prueba de hipótesis. El p-value de la prueba de hipótesis nos indica la probabilidad de obtener unos coeficientes como los nuestros dada la hipótesis de nulidad según la cuál los coeficientes verdaderos son 0. Si esa probabilidad es muy baja podemos rechazar la hipótesis de nulidad y considerar que nuestros coeficientes son diferentes de 0. 
+Hasta ahora hemos tratado a los coeficientes como si fueran un parámetro: el verdadero valor de la pendiente, suficientemente informativo por sí mismo. Sin embargo no son parámetros, son *estimaciones* y, como tales, no son completamente precisas. En sentido estricto son el centro de una distribución de probabilidades de coeficientes, el valor más probable, pero no el único posible. Cuan dispersa es esa distribución nos lo indica el error estándar: cuanto mayor el error más dispersos estarán los coeficientes, cuanto menor, menos dispersos. 
+Todos los coeficientes estimados del modelo cuatro son numéricamente distintos de 0: aparentemente tienen un efecto  sobre la probabilidad de presidenta. Pero si los consideramos el centro de una distribución de coeficientes deberíamos contemplar la posibilidad --probabilidad-- de que el verdadero coeficiente fuera otro, quizás 0. Para minimizar la posibilidad de tratar como un valor distinto de cero a un coeficiente que lo es deberíamos realizar una prueba de hipótesis. En ella que comparamos a los coeficientes obtenidos en el Modelo 4 con unos coeficientes hipotéticos iguales a 0. No es necesario que lo hagamos cada vez y por separado, el sumario de los modelos lineales generalizados nos presenta los resultados de esa prueba de hipótesis. El p-value de la prueba de hipótesis nos indica la probabilidad de obtener unos coeficientes como los nuestros dada la hipótesis de nulidad según la cuál los coeficientes verdaderos son 0. Si esa probabilidad es muy baja podemos rechazar la hipótesis de nulidad y considerar que nuestros coeficientes son diferentes de 0. 
 
 Obtenemos el sumario de un modelo con la función genérica `summary()`. Observemos la quinta columna del sumario, que reporta los p-value que especificamos en el párrafo anterior. 
 
@@ -299,7 +290,7 @@ Obtenemos el sumario de un modelo con la función genérica `summary()`. Observe
 summary(molige4)
 ```
 
-La probabilidad de obtener los coeficientes del Modelo 4 dada la hipótesis de que el verdadero coeficiente es 0 es baja en todos los casos, excepto para el IM. En este caso el p-value es 0.6922, es decir, es muy probable que una distribución al azar de coeficientes con media 0 produzca el coeficiente que estimó el modelo. Concluimos que no es significativamente diferente de 0 y que el IM no tiene un efecto sobre la probabilidad de presidenta. Presidentes y presidentas se distribuyen de manera independiente al Índice de Marginación de un municipio. 
+La probabilidad de obtener los coeficientes del Modelo 4 dada la hipótesis de que el verdadero coeficiente es 0 es baja en todos los casos, excepto para el IM. En este caso el p-value es 0.6922, es decir, es muy probable que una distribución al azar de coeficientes con media 0 produzca el coeficiente que estimó el modelo. Concluimos que no es significativamente diferente de 0 y que el IM no tiene un efecto sobre la probabilidad de presidenta. Presidentes y presidentas se distribuyen de manera independiente al Índice de Marginación de un municipio. Para una discusión sobre las pruebas de hipótesis vea el [Anexo I. Asterisco sobre los asteriscos.]
 
 ¿Qué hay de los modelos anteriores? Para facilitar la comparación los reportaremos en una tabla formateada, usando la función `htmlreg()` del paquete `texreg()`. Esta función recibe una lista de modelos y nos regresa una tabla formateda con esos modelos. Para salidas en consola utilizamos `screenreg()` y `texreg()` para tablas formateadas en $\LaTeX$. 
 
@@ -355,3 +346,24 @@ La función `logitmfx()` no recibe a un objeto de la clase `glm`, sino que requi
 ```{r}
 round(mfx::logitmfx(sexo~partido_coalicion+POmenor5000+POB_TOT+IM, presidentes)$mfxest, 6) 
 ```
+
+
+#Anexo I. Asterisco sobre los asteriscos. 
+
+En el contextos de los modelos logit --y en todos los demás-- debemos tener muy claro qué hacemos cuando hacemos una prueba de hipótesis y qué interpretación podemos realizar del mismo. En este caso se estima la probabilidad de obtener unos coeficientes como el que obtuvimos en una hipotética distribución de coeficientes que tiene como centro al 0 ~~y una desviación similar a la de nuestros coeficientes(?)~~. Si esa probabilidad es muy baja podemos rechazar $H_0$, la hipótesis de nulidad que sostiene que el verdadero es 0. Hay un criterio establecido para interpretar que significa *muy baja*. Cuando el p-value es menor a 0.01 se considera que hay mucha evidencia en contra de la hipótesis de nulidad: hay una probabilidad de del 1% de que el verdadero valor sea 0. Esto suele expresarse con tres asteriscos (***) al lado del p-value. 
+Cuando es menor a 0.05 (**) también podemos rechazar la hipótesis de nulidad, pero aceptando un poco más de incertidumbre: hay una probabilidad del 5% de que una distribución de coeficientes centrada en el 0 contenga nuestros coeficientes y así con p-values todavía más altos. Las pruebas de hipótesis no eliminan la incertidumbre, en el mejor de los casos la cuantifican. 
+
+El p-value de la prueba de hipótesis depende de dos valores: el coeficiente y el error. Un p-value puede ser bajo --y, por lo tanto, el coeficiente estadísticamente significativo-- porque es muy lejano a 0 y tiene un error relativamente bajo. O ser muy cercano a 0, pero al tener un error muy bajo ser significativamente distinto. Vale la pena revisar los coeficientes y el error. Quizás un coeficiente sea significativo por tener un error muy pequeño, pero sigue siendo cercano a cero: su efecto es distinguible, pero muy pequeño. 
+Consideremos al Modelo 4 y el coeficiente 0.0006491 para la variable POmenor5000. El p-value para ese coeficiente es 0.00264, sería razonable rechazar la hipótesis de nulidad y concluir que es diferente de 0. En este caso diríamos que la ruralidad tiene un efecto sobre la probabilidad de presidenta. Sin embargo ¿cuán tangible es ese efecto? En mi opinión, muy poco. La razón de probabilidad presidenta es 1.000649, es decir,  por cada incremento de un 1% de población en localidades con menos de 5000 habitantes aumenta un 0.0006491 la razón de probabilidad de presidenta. ¿Cuanto aumentaría si, digamos, nos pasamos de 0% de población en localidades menores a un 50%? Podemos obtener este número elevando el exponencial de $\beta$ al porcentaje que nos interesa. En este caso $1.000649^{50}=1.032987$. Es decir, pasando del 0 al 50% de población en localidades con menos de 5000 habitantes la probabilidad de presidenta aumenta un 3.2%. Dependerá de nuestra hipótesis sustantiva determinar si es un cambio importante o no. A mí me sabe a poco: la ruralidad tiene un efecto significativo, pero es muy bajo. No sería sorprendente que replicando estos datos para otro ciclo electoral esta pendiente desaparezca o cambie de signo. Podría ser, perfectamente, *ruido*.  
+
+Consideremos algunas posibles interpretaciones erroneas de un p-value, es decir, que *no* es un p-value. 
+
+- *No* es una magnitud que nos diga algo sobre la relación entre $x$ y $y$. Eso nos lo indica el coeficiente.  
+
+- Un p-value bajo *no* significa que el coeficiente que estimó el modelo es el verdadero coeficiente. Solamente que podemos rechazar razonablemente la hipótesis  de que está en una distribución centrada en 0. ¡El verdadero coeficiente podría ser todavía más alto!
+
+- *No* es la prueba definitiva de que nuestro coeficiente es diferente de 0. Las distribuciones de probabilidad son asintóticas, así que aún con un p-value extremadamente bajo sigue existiendo una probabilidad mayor que cero de que el verdadero coeficiente sea... 0. 
+
+- *No* indica la cantidad de veces que debemos repetir el experimento --en este caso, modelar y obtener coeficientes para datos similares-- hasta obtener un error. Un p-value de 0.05 *no* puede interpretarse sostiendo que cada 100 modelos sólo 5 reportarán un falso positivo: aceptar que el coeficiente es diferente de 0 cuando no lo es. 
+
+- Un p-value *no* estima la probabilidad de que la hipótesis estadística $H_1$ sea verdadera dados las datos. Hace todo lo contrario, estima la probabilidad de nuestros de datos dado $H_0$. 
