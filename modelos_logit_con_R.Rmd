@@ -1,5 +1,5 @@
 ---
-title: "Modelo logit con R"
+title: "Modelos logit con R"
 author: "Martín Paladino"
 date: "5 de abril de 2017"
 output:
@@ -34,28 +34,7 @@ Le pediríamos al modelo que predijera 0 o 1, al fin y al los podríamos conside
 
 (@logit) $ln(\frac{p_1}{1-p_1})=\beta_0+\beta_1x+...\beta_ix$
 
-El lado derecho es igual de cualquier modelo lineal, pero el lado izquierdo tiene peculiaridades que vale la pena comentar. Como mencionamos, ya no buscamos al valor de $y$ como una combinación lineal de los valores de $x_1...X_i$. Lo que buscamos es el *logaritmo de las razones de probabilidad de $y=1$*, que obtenemos dividiendo las probabilidades 1 por la probabilidad de 0.^[Como sabemos que la probabilidad de varía entre 0 y 1 entonces 1 menos la probabilidad de de 1 es igual a la probabilidad de 0.] 
-
->Excurso: El momio tiene razones, que la razón desconoce. 
-
->Las razones de probabilidad, también llamadas razones de momio o odds ratio, se obtienen dividiendo la probabilidad de éxito por las de fracaso o, más secamente, la probabilidad de 1 entre la probabilidad de 0. Son una transformación de la probabilidad usuales, que varían entre 0 y 1, pero en lugar de eso varían entre 0 e infinito. Una razón de probabilidad 1 significa que ambos eventos tienen la misma probabilidad: la obtuvimos dividiendo 0.5 entre 0.5 Una probabilidad mayor que 1 significa que el evento éxito es más probable que el evento fracaso y menor que uno lo inverso. 
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-tribble(~fila,~p0, ~p1,
-            1,0.1, 0.9,
-            2,0.2, 0.8,
-            3,0.3, 0.7, 
-            4,0.4, 0.6, 
-            5,0.5, 0.5, 
-            6,0.6, 0.4, 
-            7,0.3, 0.7, 
-            8,0.2, 0.8, 
-            9,0.1, 0.9) %>% 
-  mutate(`RP 1`=p1/p0) %>% 
-  kable(., caption="Razones de probabilidad de algunos pares de probabilidades")
-```
-
->La razón de probabilidad nos da una magnitud de cuanto más probable es un evento que otro. En la cuarta fila de la Tabla 1 encontramos que el evento 1 tiene una razón de probabilidad de 1.5. Esto significa que es un 50% más probable obtener 1 que obtener 0. En la sexta fila la razón de probabilidad de 1 es 0.666: obtener 1 es un 66% menos probable que obtener 0. Profundizaremos estos conceptos más adelante, cuando veamos la interpretación de los coeficientes de un modelo logit. Por ahora aceptemos que las razones de probabilidad son más complicadas de interpretar que las probabilidad a las que estamos acostumbrados, pero no es posible ajustar modelos lineales para variables categóricas de otro modo. C'est comme ça. 
+El lado derecho es igual de cualquier modelo lineal, pero el lado izquierdo tiene peculiaridades que vale la pena comentar. Como mencionamos, ya no buscamos al valor de $y$ como una combinación lineal de los valores de $x_1...X_i$. Lo que buscamos es el *logaritmo de las razones de probabilidad de $y=1$*, que obtenemos dividiendo las probabilidades 1 por la probabilidad de 0.^[Como sabemos que la probabilidad de varía entre 0 y 1 entonces 1 menos la probabilidad de de 1 es igual a la probabilidad de 0.] El [Anexo I. Probabilidades y razones de probabilidad.] desarrolla algunas propiedades de las razones de probabilidad. 
 
 #Ajuste  de modelos logit con `glm()`
 
@@ -282,7 +261,58 @@ De todos modo con  este modelo podríamos concluir que el partido es relevante p
 ##Pruebas de significancia. 
 
 Hasta ahora hemos tratado a los coeficientes como si fueran un parámetro: el verdadero valor de la pendiente, suficientemente informativo por sí mismo. Sin embargo no son parámetros, son *estimaciones* y, como tales, no son completamente precisas. En sentido estricto son el centro de una distribución de probabilidades de coeficientes, el valor más probable, pero no el único posible. Cuan dispersa es esa distribución nos lo indica el error estándar: cuanto mayor el error más dispersos estarán los coeficientes, cuanto menor, menos dispersos. 
-Todos los coeficientes estimados del modelo cuatro son numéricamente distintos de 0: aparentemente tienen un efecto  sobre la probabilidad de presidenta. Pero si los consideramos el centro de una distribución de coeficientes deberíamos contemplar la posibilidad --probabilidad-- de que el verdadero coeficiente fuera otro, quizás 0. Para minimizar la posibilidad de tratar como un valor distinto de cero a un coeficiente que lo es deberíamos realizar una prueba de hipótesis. En ella que comparamos a los coeficientes obtenidos en el Modelo 4 con unos coeficientes hipotéticos iguales a 0. No es necesario que lo hagamos cada vez y por separado, el sumario de los modelos lineales generalizados nos presenta los resultados de esa prueba de hipótesis. El p-value de la prueba de hipótesis nos indica la probabilidad de obtener unos coeficientes como los nuestros dada la hipótesis de nulidad según la cuál los coeficientes verdaderos son 0. Si esa probabilidad es muy baja podemos rechazar la hipótesis de nulidad y considerar que nuestros coeficientes son diferentes de 0. 
+Todos los coeficientes estimados del modelo cuatro son numéricamente distintos de 0: aparentemente tienen un efecto  sobre la probabilidad de presidenta. Pero si los consideramos el centro de una distribución de coeficientes deberíamos contemplar la posibilidad --probabilidad-- de que el verdadero coeficiente fuera otro, quizás 0. Para minimizar la posibilidad de tratar como un valor distinto de cero a un coeficiente que lo es deberíamos realizar una prueba de hipótesis. En ella que comparamos a los coeficientes obtenidos en el Modelo 4 con unos coeficientes hipotéticos iguales a 0. 
+
+###Estimación manual de la Prueba de Wald. (wonkish)
+
+En modelos logit la prueba de hipótesis que se lleva a cabo para contrastar la hipótesis de que los coeficientes son diferentes de 0 es la prueba de Wald, que estima un estadístico $\theta$ o z de cada coeficiente, a diferencia del estadístico t que ocupamos en los modelos lineales con distribución gaussiana y enlace directo. El estadístico z se obtiene dividiendo al estimado entre el error estándar. Este valor z nos indica el valor del coeficiente normalizado, es decir, denrto una distribución de probabilidad normal con media 0 y desviación estándar 1.^[Una discusión tan profunda como informal sobre este tópico está disponible en [http://stats.stackexchange.com/questions/60074/wald-test-for-logistic-regression]] Cuanto más cercano a 0 el valor z, menos probable que sea diferente de 0. Para saber cuál es esa probabilidad calculamos la función de densidad para ese valor en una distribución normal: ese es nuestro p-value. Cuanto más bajo el p-value menor es la probabilidad de obtener  nuestro coeficiente dada la hipótesis de nulidad. 
+
+```{r, waldtest}
+#Estimación de la prueba de Wald en tres pasos. 
+
+#Paso 1. Extraer los coeficientes y los errores estandar del Modelo 4.  
+
+summary(molige4)$coefficients[,1]   #Subconjunto de la lista coeficientes, columna 1: estimados
+summary(molige4)$coefficients[,2]   #Subconjunto de la lista coeficientes, columna 2: errores estandar
+
+#Estimar el valor z
+
+z <- summary(molige4)$coefficients[,1]/summary(molige4)$coefficients[,2]
+z
+
+#Estimar la probilidad de z en una distribución normal con media 0 y sigma 1. 
+
+p <- (1 - pnorm(abs(z), 0, 1)) * 2  #Usamos pnorm() para estimar la probabilidad, dado que es una función de prob acumulada usamos 1-pnorm()  
+p
+```
+
+###Demostración gráfica de la prueba de Wald para `partido_PVEM`
+
+```{r, grafico_wald, , fig.cap="Prueba de Wald para dos coeficientes", fig.height=6, echo=FALSE}
+#Prueba gráfica para partido_coalicionPVEM z=2.423264 vs. partido_coalicionPVEM=0
+
+normales <- data.frame(H1=seq(-2, 6, length=100), H0=seq(-4, 4, length=100)) 
+altura_est <- dnorm(normales$H1, 2.43264, 1)
+altura_cero <- dnorm(normales$H0)
+normales <- cbind(gather(normales), c(altura_est, altura_cero))
+colnames(normales)[3] <- "altura"
+ggplot(normales, aes(x=value, y=altura, fill=key)) + 
+  geom_area(alpha=0.5) + 
+  geom_vline(xintercept=2.43264) + 
+  geom_vline(xintercept=0) +
+  annotate("label", x=0, y=0.3, label="media=0") +
+  annotate("label", x=2.432, y=0.3, label="media=2.432") + 
+  geom_point(x=2.43264, y=0.01938) + 
+  annotate("label", x=2.4, y=0.01938, label="p-value", hjust=-0.2) +
+  labs(x="Coeficiente", 
+         y="Probabilidad", 
+         fill="Hipótesis") + 
+  theme_minimal()
+
+```
+
+No es necesario que hagamos esta prueba cada vez y por separado, el sumario de los modelos lineales generalizados nos presenta los resultados de esa prueba de hipótesis. El p-value de la prueba de Wald nos indica la probabilidad de obtener unos coeficientes como los nuestros dada la hipótesis de nulidad H0 según la cuál los coeficientes verdaderos son 0. Si esa probabilidad es muy baja podemos rechazar la hipótesis de nulidad y considerar que nuestros coeficientes son diferentes de 0. 
+Por supuesto, podríamos hacer una prueba de hipótesis con una H0 diferente, por ejemplo, contra la hipótesis de que el verdadero es 2. 
 
 Obtenemos el sumario de un modelo con la función genérica `summary()`. Observemos la quinta columna del sumario, que reporta los p-value que especificamos en el párrafo anterior. 
 
@@ -290,7 +320,7 @@ Obtenemos el sumario de un modelo con la función genérica `summary()`. Observe
 summary(molige4)
 ```
 
-La probabilidad de obtener los coeficientes del Modelo 4 dada la hipótesis de que el verdadero coeficiente es 0 es baja en todos los casos, excepto para el IM. En este caso el p-value es 0.6922, es decir, es muy probable que una distribución al azar de coeficientes con media 0 produzca el coeficiente que estimó el modelo. Concluimos que no es significativamente diferente de 0 y que el IM no tiene un efecto sobre la probabilidad de presidenta. Presidentes y presidentas se distribuyen de manera independiente al Índice de Marginación de un municipio. Para una discusión sobre las pruebas de hipótesis vea el [Anexo I. Asterisco sobre los asteriscos.]
+La probabilidad de obtener los coeficientes del Modelo 4 dada la hipótesis de que el verdadero coeficiente es 0 es baja en todos los casos, excepto para el IM. En este caso el p-value es 0.6922, es decir, es muy probable que una distribución al azar de coeficientes con media 0 produzca el coeficiente que estimó el modelo. Concluimos que no es significativamente diferente de 0 y que el IM no tiene un efecto sobre la probabilidad de presidenta. Presidentes y presidentas se distribuyen de manera independiente al Índice de Marginación de un municipio. Para una discusión sobre las pruebas de hipótesis vea el [Anexo II. Asterisco sobre los asteriscos.]
 
 ¿Qué hay de los modelos anteriores? Para facilitar la comparación los reportaremos en una tabla formateada, usando la función `htmlreg()` del paquete `texreg()`. Esta función recibe una lista de modelos y nos regresa una tabla formateda con esos modelos. Para salidas en consola utilizamos `screenreg()` y `texreg()` para tablas formateadas en $\LaTeX$. 
 
@@ -348,12 +378,66 @@ round(mfx::logitmfx(sexo~partido_coalicion+POmenor5000+POB_TOT+IM, presidentes)$
 ```
 
 
-#Anexo I. Asterisco sobre los asteriscos. 
+#Modelos ligit multinomiales. 
 
-En el contextos de los modelos logit --y en todos los demás-- debemos tener muy claro qué hacemos cuando hacemos una prueba de hipótesis y qué interpretación podemos realizar del mismo. En este caso se estima la probabilidad de obtener unos coeficientes como el que obtuvimos en una hipotética distribución de coeficientes que tiene como centro al 0 ~~y una desviación similar a la de nuestros coeficientes(?)~~. Si esa probabilidad es muy baja podemos rechazar $H_0$, la hipótesis de nulidad que sostiene que el verdadero es 0. Hay un criterio establecido para interpretar que significa *muy baja*. Cuando el p-value es menor a 0.01 se considera que hay mucha evidencia en contra de la hipótesis de nulidad: hay una probabilidad de del 1% de que el verdadero valor sea 0. Esto suele expresarse con tres asteriscos (***) al lado del p-value. 
-Cuando es menor a 0.05 (**) también podemos rechazar la hipótesis de nulidad, pero aceptando un poco más de incertidumbre: hay una probabilidad del 5% de que una distribución de coeficientes centrada en el 0 contenga nuestros coeficientes y así con p-values todavía más altos. Las pruebas de hipótesis no eliminan la incertidumbre, en el mejor de los casos la cuantifican. 
+Otro caso de los modelos lineales generalizados son los modelos logit multinomiales. Los logit binomiales nos sirven para modelar una variable dependiente categórica dicotómica, pero podría interesarnos modelar una salida politómica, es decir, una categórica con más de dos niveles. 
+La función `glm()` no tiene directamente la capacidad de ajustar este tipo de modelos, aunque es posible hacerlo como un tipo especial de regresión de Poisson. Sin embargo, esto requiere mucho  trabajo previo de adecuación de los datos. La función `nnet:multinom()` facilita las cosas, pues conserva una sintaxis similar a la de `glm()` y ajusta rápidamente modelos logit multinomiales.^[Nótese que es necesario instalar el paquete y tenerlo cargado. `nnet::` está disponible en CRAN.]
+La salida de un modelo logit multinomial es similar a la de uno binomial, pero como podemos esperar hay más información, que no estamos modelando solamente el evento $y=1$, también $y=2, y=3, ..., y=k$. Los coeficientes se dividen en más tablas. 
+
+##Ajuste de modelos logit multinomiales com `multinom()`
+
+La sintaxis básica es `multinom(formula, data=datos)`. El primer término de la formula puede ser un factor con dos o más niveles y del lado derecho podemos incluir tanto factores como predictores continuos.
+Para este ejemplo tomaremos como variable dependiente `partido_coalicion`, una categórica politómica con 6 niveles. La modelaremos como un combinación lineal de la población en localidades de menos de 5000 habitantes, el Índice de Marginación y el sexo del presidente/presidenta municipal. Las dos primeras son contínuas y la útlima categórica: no hay problema, estarán del lado derecho de la fórmula donde se acepta cualquier tipo de variable.  
+
+
+```{r}
+library(nnet)
+multinom(partido_coalicion~IM+sexo, data=presidentes) -> molige5
+summary(molige5)
+```
+
+El sumario nos presenta por separado a los coeficientes y errores estándar. Los coeficientes se interpretan de igual modo que en un logit binomial: son el logaritmo de la razón de probabilidad de $y=k$ cuando cambia $x$. Para cada nivel de la variable dependiente, excepto el de referencia, se presenta una fila en la tabla. Las columnas ordenan a las variables idenpendientes y a la ordenada al orígen. 
+
+En tabla aparte se reportan los errores estándar de cada coeficiente. `multinom()` no calcula los estadísticos z y los p-value de la prueba de Wald, aunque podemos calcularlos facilmente usando el procedimiento del apartado 2.6.1.
+
+```{r}
+pruebaz.multinom <- function(modelo) {}
+```
+
+
+
+#Anexo I. Probabilidades y razones de probabilidad. 
+
+>El momio tiene razones, que la razón desconoce. 
+
+Las razones de probabilidad, también llamadas razones de momio o odds ratio, se obtienen dividiendo la probabilidad de éxito por la de fracaso. En el contexto de los modelos logit binomiales entendemos como éxito a $y=1$ y a $y=0$ como probabilidad de fracaso. Como $y$ tiene sólo dos categorías podemos obtenerlos usando $RP_{y=1}=\frac{p_{y=1}}{1-p_{y=1}}$. Son una transformación de la probabilidad usuales, que varían entre 0 y 1, pero en lugar de eso varían entre 0 y una repetición infinita  de números 9. Si bien la razón de probabilidad se expresa con un solo número tiene una referencia implícita que es el 1. Una razón de probabilidad 1 significa que ambos eventos tienen la misma probabilidad: la obtuvimos dividiendo 0.5 entre 0.5 Una razón de probabilidad mayor que 1 significa que el evento éxito es más probable que el evento fracaso y menor que 1 lo inverso.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+tribble(~fila,~p0, ~p1,
+            1,0.1, 0.9,
+            2,0.2, 0.8,
+            3,0.3, 0.7, 
+            4,0.4, 0.6, 
+            5,0.5, 0.5, 
+            6,0.6, 0.4, 
+            7,0.3, 0.7, 
+            8,0.2, 0.8, 
+            9,0.1, 0.9) %>% 
+  mutate(`RP 1`=p1/p0) %>% 
+  kable(., caption="Razones de probabilidad de algunos pares de probabilidades")
+```
+
+La razón de probabilidad nos da una magnitud de cuanto más probable es un evento que otro. En la cuarta fila de la Tabla 1 encontramos que el evento 1 tiene una razón de probabilidad de 1.5. Esto significa que es un 50% más probable obtener 1 que obtener 0. En la sexta fila la razón de probabilidad de 1 es 0.666: obtener 1 es un 66% menos probable que obtener 0.
+Los coeficientes de los modelos logit no se reportan como razones de probabilidad, sino como logaritmos de las razones de probabilidad. Aunque son más difíciles de interpretar que las razones de probabilidad tienen una ventaja: probabilidades iguales se expresan con el 0, una probabilidad superior del evento éxito con un número positivo y una menor con un número negativo. Es decir, permiten una interpretación rápida y simple de las pendients. 
+Para pasar del logaritmo de la razón a probabilidad a la razón de probabilidad exponenciamos los coeficientes y$. En R utilizamos la función `exp()`, que nos regresa el exponencial de los datos numéricos que le pasemos. 
+
+#Anexo II. Asterisco sobre los asteriscos. 
+
+En el contextos de los modelos logit --y en todos los demás-- debemos tener muy claro qué hacemos cuando hacemos una prueba de hipótesis y qué interpretación podemos realizar del mismo. En este caso se estima la probabilidad de obtener unos coeficientes como el que obtuvimos en una hipotética distribución de coeficientes que tiene como centro al 0 y una desviación similar a la de nuestros coeficientes. Si esa probabilidad es muy baja podemos rechazar $H_0$, la hipótesis de nulidad que sostiene que el verdadero es 0. Hay un criterio establecido para interpretar que significa *muy baja*. Cuando el p-value es menor a 0.01 se considera que hay mucha evidencia en contra de la hipótesis de nulidad: hay una probabilidad de del 1% de que el verdadero valor sea 0. Esto suele expresarse con tres asteriscos (\*\*\*) al lado del p-value. 
+Cuando es menor a 0.05 (\*\*) también podemos rechazar la hipótesis de nulidad, pero aceptando un poco más de incertidumbre: hay una probabilidad del 5% de que una distribución de coeficientes centrada en el 0 contenga nuestros coeficientes y así con p-values todavía más altos. Las pruebas de hipótesis no eliminan la incertidumbre, en el mejor de los casos la cuantifican. 
 
 El p-value de la prueba de hipótesis depende de dos valores: el coeficiente y el error. Un p-value puede ser bajo --y, por lo tanto, el coeficiente estadísticamente significativo-- porque es muy lejano a 0 y tiene un error relativamente bajo. O ser muy cercano a 0, pero al tener un error muy bajo ser significativamente distinto. Vale la pena revisar los coeficientes y el error. Quizás un coeficiente sea significativo por tener un error muy pequeño, pero sigue siendo cercano a cero: su efecto es distinguible, pero muy pequeño. 
+
 Consideremos al Modelo 4 y el coeficiente 0.0006491 para la variable POmenor5000. El p-value para ese coeficiente es 0.00264, sería razonable rechazar la hipótesis de nulidad y concluir que es diferente de 0. En este caso diríamos que la ruralidad tiene un efecto sobre la probabilidad de presidenta. Sin embargo ¿cuán tangible es ese efecto? En mi opinión, muy poco. La razón de probabilidad presidenta es 1.000649, es decir,  por cada incremento de un 1% de población en localidades con menos de 5000 habitantes aumenta un 0.0006491 la razón de probabilidad de presidenta. ¿Cuanto aumentaría si, digamos, nos pasamos de 0% de población en localidades menores a un 50%? Podemos obtener este número elevando el exponencial de $\beta$ al porcentaje que nos interesa. En este caso $1.000649^{50}=1.032987$. Es decir, pasando del 0 al 50% de población en localidades con menos de 5000 habitantes la probabilidad de presidenta aumenta un 3.2%. Dependerá de nuestra hipótesis sustantiva determinar si es un cambio importante o no. A mí me sabe a poco: la ruralidad tiene un efecto significativo, pero es muy bajo. No sería sorprendente que replicando estos datos para otro ciclo electoral esta pendiente desaparezca o cambie de signo. Podría ser, perfectamente, *ruido*.  
 
 Consideremos algunas posibles interpretaciones erroneas de un p-value, es decir, que *no* es un p-value. 
@@ -367,3 +451,13 @@ Consideremos algunas posibles interpretaciones erroneas de un p-value, es decir,
 - *No* indica la cantidad de veces que debemos repetir el experimento --en este caso, modelar y obtener coeficientes para datos similares-- hasta obtener un error. Un p-value de 0.05 *no* puede interpretarse sostiendo que cada 100 modelos sólo 5 reportarán un falso positivo: aceptar que el coeficiente es diferente de 0 cuando no lo es. 
 
 - Un p-value *no* estima la probabilidad de que la hipótesis estadística $H_1$ sea verdadera dados las datos. Hace todo lo contrario, estima la probabilidad de nuestros de datos dado $H_0$. 
+
+#Anexo III. Tipos de variables independiente y modelo lineal apropiado. 
+
+Variable dependiente | Definición | Ejemplo     | Tipo de modelo | Función en R
+-----------|------------------|-----------------|-------------|----------
+Continua             | Dentro de un rango, puede adquirir infinitos valores numéricos | Ingreso en pesos MN | Lineal con mínimos cuadrados ordinarios | `lm()`
+Categórica dicotómica | Restringida a dos valores no ordenados | Sexo, Rural/urbano, Votó/No votó | logit | `glm(family=binomial())`
+Categórica politómica | Más de dos categorías no ordenadas | Género, partido político, Grado de Marginación | `multinom()`
+Conteo                | Conteo de eventos cuyo universo de probabilidad no es conocido^[Para los modelos logit podemos convertir a los conteos en probabilidades, ya que conocemos la n, el total de eventos.] | Denuncias por violencia de género | Lineal de Poisson | `glm(family=log())`
+Proporción | y=0 y y=1 son proporciones que suman 1 | Composición parlamentaria: hombres y mujeres | Regresión beta | `betareg()`  
