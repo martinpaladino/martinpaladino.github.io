@@ -31,6 +31,6 @@ knitr::opts_chunk$set(echo = TRUE)
 - Visualización de datos categóricos. 
 - Pruebas de independencia estadística por grupos. 
 
-#[Análisis de correspondencias y correspondencias múltiples.]()
+#[Análisis de correspondencias y correspondencias múltiples.](martinpaladino.github.io/Presentacion_ACM.html)
 
 #[Análisis de clases latentes]()
