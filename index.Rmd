@@ -6,6 +6,9 @@ date: Actualizado el `r format(Sys.time(), "%d/%m/%Y")`
 output: 
   html_document: 
     theme: united
+    toc: yes
+    toc_float: true
+    toc_collapsed: true
 ---
 
 Esta es la página que acompaña al repositorio homónimo. Incluye las salidas en .html de las guías de manejo de datos, gráficos y modelado en R.  
