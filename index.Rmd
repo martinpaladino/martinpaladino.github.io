@@ -24,7 +24,7 @@ Mis caprichos:
 
 # Guías de  R.
 
-**Las guías de R básicas migraron a formato de libro y están disponibles en [martinpaladino.github.com/rsociales](https://martinpaladino.github.io/rsociales)**
+> **Las guías de R básicas migraron a formato de libro y están disponibles en [martinpaladino.github.com/rsociales](https://martinpaladino.github.io/rsociales)**
 
 
 # Ejercicios. 
