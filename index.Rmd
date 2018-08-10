@@ -6,9 +6,6 @@ date: Actualizado el `r format(Sys.time(), "%d/%m/%Y")`
 output: 
   html_document: 
     theme: united
-    toc: yes
-    toc_float: true
-    toc_collapsed: true
 ---
 
 Esta es la página que acompaña al repositorio homónimo. Incluye las salidas en .html de las guías de manejo de datos, gráficos y modelado en R.  
@@ -27,94 +24,8 @@ Mis caprichos:
 
 # Guías de  R.
 
+**Las guías de R básicas migraron a formato de libro y están disponibles en [martinpaladino.github.com/rsociales](https://martinpaladino.github.io/rsociales)**
 
-## [Introdución a R.](https://martinpaladino.github.io/introduccion_r.html)
-
-- R como lenguaje y entorno de trabajo
-- Manejo del entorno R. 
-    - Instalación de R y Rstudio.
-    - Interface de Rstudio. 
-    - Sintaxis básica de R.
-- Tipos y estructuras de datos.
-    - Numéricos, caracteres, factores, lógicos, fechas.
-    - Vectores, matrices, arrays, data.frame y lista.
-  
-## [Primeros pasos.](https://martinpaladino.github.io/primeros_pasos.html) 
-
-- Operaciones matemáticas en R. 
-- Funciones: imput y output. 
-    - Sintaxis: funciones y argumentos. 
-    - Notación polaca invertida. 
-- Objetos y nombres: asignación. 
-- Orgen de ejecución definido entre paréntesis.
-
-## [Investigación reproducible con R](https://martinpaladino.github.io/programacion_funcional.html)
-
-- Investigación reproducible. 
-    - Definición. 
-    - Cadena de software libre para investigación reproducible. 
-    
-- Conceptos de la programación funcional aplicables a la investigación reproducible. 
-    - Inmutabilidad de los datos. 
-    - Transparencia referencial. 
-    - Funciones puras. 
-- CODA
-
-## [Manipulación de datos con dplyr](https://martinpaladino.github.io/manipulacion_de_datos_con_r_dplyr_y_tidyr.html)
-
-Resumida en cuatro operaciones:
-
-- Extraer subconjuntos de datos. 
-    - Selección de columnas. 
-    - Filtrado de filas.  
-- Transformarlos. 
-    - Recodificaciónd de variables categóricas. 
-    - Operaciones aritméticas sobre variables numéricas.
-- Obtener sumarios. 
-    - Para el conjunto de los datos.
-    - Por grupos.  
--Unir múltiples bases de datos. 
-
-## [Gráficos con R y ggplot](https://martinpaladino.github.io/graficos_con_r_y_ggplot.html)
-
-- Desde la gramática de los gráficos hasta gráficos multivaridos. 
-    - Definición concetual de gráficos y sus elementos. 
-- Gráficos básicos por tipos: columnas, línea, dispersión.
-- Gráficos multivariados.
-    - Con claves de color o símbolos.
-    - Multipanel.
-- Control del aspecto estético de los gráficos. 
-    - Con estilos visuales predefinidos. 
-    - Personalizado. 
-- Gráficos exploratorios con sintaxis simplificada. 
-  
-
-## [Análisis de datos categóricos con R](https://martinpaladino.github.io/index_categoricos.html)
-
-- Datos categóricos. 
-- Tablas de contingencia. 
-    - Modelos de independencia. 
-- Análisis de correspondencia y correspondencias múltiples. 
-- Análisis de Clases Latentes. 
-
-## [Modelos logit con R](martinpaladino.github.io/modelos_logit_con_R.html)
-
-- Definición de modelos logit. 
-    - Ajuste de modelos logit con R. 
-- Interpretación de coeficientes. 
-- Presentación de resultados. 
-    - Gráficos de coeficientes. 
-    - Efectos totales y efectos marginales. 
-
-## [Modelos lineales con R](martinpaladino.github.io/modelos_lineales_con_R.html)
-
-- Definición de modelo lineal.
-    - Obtención de coeficientes por mínimos cuadrados ordinarios. 
-- Ajuste de modelos lineales en R. 
-    - Sumario de un modelo. 
-    - Comparación de modelos. 
-- Diagnóstico de cumplimiento de supuestos de modelos lineales. 
-    - Modelos lineales robustos. 
 
 # Ejercicios. 
 
