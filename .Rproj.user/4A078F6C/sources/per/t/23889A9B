@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1534032179491.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2879960444",
+    "id" : "23889A9B",
+    "lastKnownWriteTime" : 1534024501,
+    "last_content_update" : 1534024501,
+    "path" : "~/gdrive/martinpaladino.github.io/blog/config.toml",
+    "project_path" : "blog/config.toml",
+    "properties" : {
+        "cursorPosition" : "13,0",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "toml"
+}

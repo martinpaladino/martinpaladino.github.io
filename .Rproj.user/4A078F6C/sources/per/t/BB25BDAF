@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1534025546453.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4243570608",
+    "id" : "BB25BDAF",
+    "lastKnownWriteTime" : 1534036098,
+    "last_content_update" : 1534036098660,
+    "path" : "~/gdrive/martinpaladino.github.io/blog/content/post/2018-08-11-web-scraping-de-revistas-académicas.Rmd",
+    "project_path" : "blog/content/post/2018-08-11-web-scraping-de-revistas-académicas.Rmd",
+    "properties" : {
+        "chunk_output_type" : "console",
+        "cursorPosition" : "121,12",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

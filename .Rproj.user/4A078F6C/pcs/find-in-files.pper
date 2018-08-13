@@ -1,0 +1,10 @@
+{
+    "dialog-state" : {
+        "caseSensitive" : false,
+        "filePatterns" : [
+        ],
+        "path" : "~/gdrive/martinpaladino.github.io",
+        "query" : "Read more",
+        "regex" : false
+    }
+}

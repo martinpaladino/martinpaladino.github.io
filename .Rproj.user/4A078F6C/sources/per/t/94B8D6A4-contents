@@ -1,0 +1,5 @@
+# init blog
+
+library(blogdown)
+
+new_site (dir = "./blog", theme = "taikii/whiteplain") 
